@@ -16,7 +16,7 @@ services:
   webbbs_app:
     build: .
     depends_on:
-      db:
+      webbbs_db::
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://bbs:bbs@db:5432/bbs?schema=public
