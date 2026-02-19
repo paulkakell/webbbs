@@ -27,10 +27,7 @@ services:
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
     ports:
-      - "3000:3000"
+      - "${PORT}:3000"
     volumes:
-      - bbs-data:/data
+      - ${VOLUME}:/data
 
-volumes:
-  db-data:
-  bbs-data:
