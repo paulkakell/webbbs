@@ -1,0 +1,7 @@
+{
+  "doorId": "guess-number",
+  "name": "Guess The Number",
+  "description": "A classic number guessing game (internal door).",
+  "type": "INTERNAL",
+  "enabled": true
+}

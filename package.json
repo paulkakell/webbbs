@@ -1,0 +1,36 @@
+{
+  "name": "webbbs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Classic 1992-style BBS experience in a web interface (Dockerized).",
+  "scripts": {
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs",
+    "vendor": "node scripts/copy-vendor.mjs",
+    "db:push": "prisma db push",
+    "prisma:generate": "prisma generate",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "docker:start": "sh scripts/docker-start.sh"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^10.0.1",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/multipart": "^9.0.3",
+    "@fastify/static": "^8.0.4",
+    "@fastify/websocket": "^11.0.1",
+    "@prisma/client": "^5.21.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "mime-types": "^2.1.35",
+    "pg": "^8.12.0",
+    "uuid": "^9.0.1",
+    "xterm": "^5.5.0",
+    "xterm-addon-fit": "^0.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "prisma": "^5.21.1"
+  }
+}

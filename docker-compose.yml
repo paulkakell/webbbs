@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bbs
+      POSTGRES_PASSWORD: bbs
+      POSTGRES_DB: bbs
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bbs -d bbs"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://bbs:bbs@db:5432/bbs?schema=public
+      PORT: "3000"
+      DATA_DIR: /data
+      SYSOP_HANDLE: ${SYSOP_HANDLE:-sysop}
+      SYSOP_PASSWORD: ${SYSOP_PASSWORD:-change-me}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+    ports:
+      - "3000:3000"
+    volumes:
+      - bbs-data:/data
+
+volumes:
+  db-data:
+  bbs-data:

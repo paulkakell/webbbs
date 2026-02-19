@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webBBS Admin Login</title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <div class="admin-wrap">
+    <h1>webBBS Admin</h1>
+    <div class="card">
+      <form id="loginForm">
+        <label>Handle</label>
+        <input name="handle" autocomplete="username" required />
+
+        <label>Password</label>
+        <input name="password" type="password" autocomplete="current-password" required />
+
+        <div style="height: 12px"></div>
+        <button type="submit">Login</button>
+        <p id="err" class="small"></p>
+      </form>
+    </div>
+
+    <p class="small">Tip: Sysop can also configure inside the BBS Sysop menu.</p>
+    <p class="small"><a href="/bbs">Back to BBS</a></p>
+  </div>
+
+  <script src="/admin/login.js"></script>
+</body>
+</html>

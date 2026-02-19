@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SYSOP
+  ADMIN
+}
+
+enum DoorType {
+  INTERNAL
+  EXTERNAL
+}
+
+model User {
+  id            String   @id @default(uuid())
+  handle        String   @unique
+  passwordHash  String
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  lastLoginAt   DateTime?
+
+  uploadBytes   BigInt   @default(0)
+  downloadBytes BigInt   @default(0)
+
+  threads       Thread[]
+  posts         Post[]
+  uploads       FileEntry[] @relation("Uploader")
+
+  webSessions   WebSession[]
+  downloads     DownloadLog[]
+}
+
+model WebSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model BbsConfig {
+  id                     Int      @id
+  bbsName                String
+  motd                   String
+  allowRegistration      Boolean
+  minUploadDownloadRatio Float
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Board {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  threads     Thread[]
+}
+
+model Thread {
+  id          String   @id @default(uuid())
+  boardId     String
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  subject     String
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  posts       Post[]
+  locked      Boolean  @default(false)
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  threadId    String
+  thread      Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  body        String
+}
+
+model FileArea {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  freeLeech   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  files       FileEntry[]
+}
+
+model FileEntry {
+  id          String   @id @default(uuid())
+  areaId      String
+  area        FileArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  filename    String
+  description String   @default("")
+  sizeBytes   BigInt
+  sha256      String
+  storagePath String
+  freeLeech   Boolean  @default(false)
+
+  uploadedAt  DateTime @default(now())
+  uploaderId  String
+  uploader    User     @relation("Uploader", fields: [uploaderId], references: [id])
+
+  downloads   DownloadLog[]
+}
+
+model DownloadLog {
+  id           String   @id @default(uuid())
+  fileId       String
+  file         FileEntry @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  downloadedAt DateTime  @default(now())
+  bytes        BigInt
+}
+
+model DoorPackage {
+  id          String   @id @default(uuid())
+  doorId      String   @unique
+  name        String
+  description String   @default("")
+  type        DoorType @default(INTERNAL)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}

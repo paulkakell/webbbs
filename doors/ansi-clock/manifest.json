@@ -1,0 +1,7 @@
+{
+  "doorId": "ansi-clock",
+  "name": "ANSI Clock",
+  "description": "Shows the current server time (internal door).",
+  "type": "INTERNAL",
+  "enabled": true
+}

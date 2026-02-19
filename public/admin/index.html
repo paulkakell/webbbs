@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webBBS Admin</title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <div class="admin-wrap">
+    <div class="row">
+      <h1 style="margin:0">webBBS Admin</h1>
+      <div style="flex:1"></div>
+      <button id="logoutBtn" style="max-width:200px">Logout</button>
+    </div>
+
+    <p class="small">All settings are stored in the database. You can also configure via Sysop inside the BBS.</p>
+
+    <div class="admin-grid">
+      <div class="card">
+        <h2>Config</h2>
+        <form id="cfgForm">
+          <label>BBS Name</label>
+          <input name="bbsName" required />
+
+          <label>MOTD</label>
+          <textarea name="motd" rows="6"></textarea>
+
+          <label>Allow Registration</label>
+          <select name="allowRegistration">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+
+          <label>Min Upload/Download Ratio</label>
+          <input name="minUploadDownloadRatio" type="number" step="0.01" min="0" />
+
+          <div style="height: 12px"></div>
+          <button type="submit">Save</button>
+          <p id="cfgMsg" class="small"></p>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Boards</h2>
+        <form id="boardForm">
+          <label>Name</label>
+          <input name="name" required />
+          <label>Description</label>
+          <input name="description" />
+          <div style="height: 12px"></div>
+          <button type="submit">Add Board</button>
+          <p id="boardMsg" class="small"></p>
+        </form>
+        <table class="table" id="boardTable"></table>
+      </div>
+
+      <div class="card">
+        <h2>File Areas</h2>
+        <form id="areaForm">
+          <label>Name</label>
+          <input name="name" required />
+          <label>Description</label>
+          <input name="description" />
+          <label>Freeleech</label>
+          <select name="freeLeech">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+          <div style="height: 12px"></div>
+          <button type="submit">Add Area</button>
+          <p id="areaMsg" class="small"></p>
+        </form>
+        <table class="table" id="areaTable"></table>
+      </div>
+
+      <div class="card">
+        <h2>Doors</h2>
+        <p class="small">Door packages are loaded from <code>./doors/*/manifest.json</code>.</p>
+        <table class="table" id="doorTable"></table>
+      </div>
+    </div>
+
+    <p class="small"><a href="/bbs">Open BBS</a></p>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>
