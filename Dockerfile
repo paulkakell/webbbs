@@ -12,7 +12,7 @@ COPY package.json ./
 COPY prisma ./prisma
 COPY scripts ./scripts
 
-RUN npm install
+RUN npm install --legacy-peer-deps --no-audit --no-fund
 
 COPY src ./src
 COPY public ./public
