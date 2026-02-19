@@ -1,5 +1,6 @@
 services:
-  webbbs_db:
+  webBBS_DB:
+    containername: webBBS_DB
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: bbs
@@ -13,12 +14,12 @@ services:
       timeout: 5s
       retries: 30
 
-  webbbs_app:
+  webBBS_App:
     build: .
     depends_on:
-      - webbbs_db
+      - webBBS_DB
     environment:
-      DATABASE_URL: postgresql://bbs:bbs@db:5432/bbs?schema=public
+      DATABASE_URL: postgresql://bbs:bbs@webBBS_DB:5432/bbs?schema=public
       PORT: "3000"
       DATA_DIR: /data
       SYSOP_HANDLE: ${SYSOP_HANDLE:-sysop}
