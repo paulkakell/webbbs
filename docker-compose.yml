@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: bbs
       POSTGRES_DB: bbs
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - ${DB_VOLUME}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bbs -d bbs"]
       interval: 5s
@@ -29,5 +29,5 @@ services:
     ports:
       - "${PORT}:3000"
     volumes:
-      - ${VOLUME}:/data
+      - ${APP_VOLUME}:/data
 
