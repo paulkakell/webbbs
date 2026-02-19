@@ -1,5 +1,5 @@
 services:
-  webBBS_DB:
+  webbbs_db:
     container_name: webbbs_db
     image: postgres:16-alpine
     environment:
@@ -14,7 +14,7 @@ services:
       timeout: 5s
       retries: 30
 
-  webBBS_App:
+  webbbs_app:
     container_name: webbbs_app
     build: .
     depends_on:
