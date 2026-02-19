@@ -18,7 +18,7 @@ services:
     depends_on:
       - webbbs_db
     environment:
-      DATABASE_URL: postgresql://bbs:bbs@webbbs_db:5432/bbs?schema=public
+      DATABASE_URL: postgresql://bbs:bbs@db:5432/bbs?schema=public
       PORT: "3000"
       DATA_DIR: /data
       SYSOP_HANDLE: ${SYSOP_HANDLE:-sysop}
