@@ -1,5 +1,5 @@
 services:
-  db:
+  webbbs_db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: bbs
@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 30
 
-  app:
+  webbbs_app:
     build: .
     depends_on:
       db:
