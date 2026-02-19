@@ -17,7 +17,7 @@ services:
     build: .
     depends_on:
       webbbs_db::
-        condition: service_healthy
+        condition: healthy
     environment:
       DATABASE_URL: postgresql://bbs:bbs@db:5432/bbs?schema=public
       PORT: "3000"
