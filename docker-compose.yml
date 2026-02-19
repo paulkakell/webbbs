@@ -1,6 +1,6 @@
 services:
   webBBS_DB:
-    containername: webBBS_DB
+    container_name: webBBS_DB
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: bbs
@@ -15,6 +15,7 @@ services:
       retries: 30
 
   webBBS_App:
+    container_name: webBBS_App
     build: .
     depends_on:
       - webBBS_DB
