@@ -126,8 +126,14 @@
     }
   });
 
-  ws.addEventListener('close', () => {
-    term.write('\r\n\r\n*** Disconnected ***\r\n');
+  ws.addEventListener('error', () => {
+    term.write('\r\n\r\n*** Connection error ***\r\n');
+  });
+
+  ws.addEventListener('close', (ev) => {
+    const code = (ev && typeof ev.code === 'number') ? ev.code : 0;
+    const reason = (ev && typeof ev.reason === 'string' && ev.reason) ? `: ${ev.reason}` : '';
+    term.write(`\r\n\r\n*** Disconnected (${code}${reason}) ***\r\n`);
   });
 
   function isPrintable(ch) {

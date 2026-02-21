@@ -1,5 +1,7 @@
 # webBBS
 
+## Version 00.01.02
+
 A Dockerized, web-served recreation of a classic early-90s BBS experience.
 
 The primary UI is a browser-based ANSI terminal (xterm.js) connected to a server-side BBS state machine over WebSockets.
@@ -58,6 +60,21 @@ The server will:
 - create/update tables (Prisma `db push`),
 - bootstrap the sysop account,
 - ensure default config exists.
+
+## Reverse proxy notes (WebSockets)
+
+The BBS terminal requires WebSockets (`/ws/bbs`). A successful handshake returns HTTP `101 Switching Protocols`.
+
+If your proxy does not forward WebSocket upgrade headers, the browser will disconnect and `/ws/bbs` may return `426 Upgrade Required`.
+
+For Nginx, ensure these headers are forwarded:
+
+```nginx
+proxy_http_version 1.1;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "Upgrade";
+```
+
 
 ## Local dev (without Docker)
 

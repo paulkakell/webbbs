@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { createWebSession, getUserFromWebSession, isAdminRole, verifyPassword } from './lib/auth.mjs';
 import { createTokenStore } from './lib/transferTokens.mjs';
+import { isWebSocketUpgradeRequest, wsUpgradeDebugSummary } from './lib/ws.mjs';
 import { BbsSession } from './bbs/BbsSession.mjs';
 import { LoginModule } from './bbs/modules/LoginModule.mjs';
 import { MainMenuModule } from './bbs/modules/MainMenuModule.mjs';
@@ -545,62 +546,118 @@ fastify.get('/api/transfer/download/:fileId', async (req, reply) => {
 });
 
 // WebSocket: BBS sessions
-fastify.get('/ws/bbs', { websocket: true }, async (conn, req) => {
-  const cfg = await loadConfig();
+//
+// Note: @fastify/websocket passes the *ws WebSocket* object to wsHandler.
+// The previous implementation incorrectly assumed a connection wrapper with a `.socket` field,
+// causing immediate disconnects.
+fastify.route({
+  method: 'GET',
+  url: '/ws/bbs',
+  handler: async (req, reply) => {
+    // If we get here, this was a plain HTTP request (no Upgrade). Provide a helpful message.
+    // This is most commonly caused by a reverse proxy that is not forwarding Upgrade headers.
+    const summary = wsUpgradeDebugSummary(req.headers);
+    reply
+      .code(426)
+      .type('text/plain; charset=utf-8')
+      .send(
+        [
+          'This endpoint requires a WebSocket upgrade (HTTP 101 Switching Protocols).',
+          '',
+          'Your request did not include (or did not preserve) the required Upgrade headers.',
+          '',
+          summary,
+          '',
+          'If you are running behind a reverse proxy, ensure it forwards:',
+          '  - Connection: Upgrade',
+          '  - Upgrade: websocket',
+          '',
+          'Then reconnect to /bbs.'
+        ].join('\n')
+      );
+  },
+  wsHandler: (socket, req) => {
+    // Attach event handlers synchronously (recommended by @fastify/websocket).
+    // Any async initialization should happen after handlers are attached.
 
-  const doorDb = {
-    async listInstalledEnabled() {
-      return prisma.doorPackage.findMany({ where: { enabled: true }, orderBy: { name: 'asc' } });
-    }
-  };
+    const doorDb = {
+      async listInstalledEnabled() {
+        return prisma.doorPackage.findMany({ where: { enabled: true }, orderBy: { name: 'asc' } });
+      }
+    };
 
-  const session = new BbsSession({
-    conn,
-    prisma,
-    config: cfg,
-    doorRegistry,
-    doorDb,
-    transferTokens,
-    dataDir: DATA_DIR,
-    baseUrl: ''
-  });
+    const session = new BbsSession({
+      socket,
+      prisma,
+      // config is loaded async below
+      config: null,
+      doorRegistry,
+      doorDb,
+      transferTokens,
+      dataDir: DATA_DIR,
+      baseUrl: ''
+    });
 
-  bbsSessions.set(session.id, session);
+    bbsSessions.set(session.id, session);
 
-  // If cookie session exists, auto-login.
-  try {
-    const cookieUser = await authUserFromCookie(req);
-    if (cookieUser) {
-      await session.loginUser(cookieUser);
-      await session.goto(new MainMenuModule());
-    } else {
-      await session.goto(new LoginModule());
-    }
-  } catch {
-    await session.goto(new LoginModule());
-  }
-
-  conn.socket.on('message', async (raw) => {
-    let msg;
-    try {
-      msg = JSON.parse(raw.toString('utf8'));
-    } catch {
-      return;
-    }
-    try {
-      await session.handleClientMessage(msg);
-    } catch (e) {
-      // Basic safety: keep session alive even if a module throws.
+    socket.on('message', async (raw) => {
+      let msg;
       try {
-        session.writeAnsi('\r\n\r\n[error]\r\n');
-      } catch {}
-    }
-  });
+        msg = JSON.parse(raw.toString('utf8'));
+      } catch {
+        return;
+      }
 
-  conn.socket.on('close', () => {
-    bbsSessions.delete(session.id);
-    session.dispose();
-  });
+      try {
+        await session.handleClientMessage(msg);
+      } catch {
+        // Basic safety: keep session alive even if a module throws.
+        try {
+          session.writeAnsi('\r\n\r\n[error]\r\n');
+        } catch {}
+      }
+    });
+
+    socket.on('close', () => {
+      bbsSessions.delete(session.id);
+      session.dispose();
+    });
+
+    socket.on('error', (err) => {
+      req.log.error({ err }, 'websocket error');
+    });
+
+    // Async init after handlers are attached.
+    void (async () => {
+      try {
+        // Defensive check: if we somehow got a non-upgraded request, avoid crashing.
+        if (!isWebSocketUpgradeRequest(req.headers)) {
+          req.log.warn({ headers: wsUpgradeDebugSummary(req.headers) }, 'wsHandler called without upgrade headers');
+        }
+
+        const cfg = await loadConfig();
+        session.config = cfg;
+
+        // If cookie session exists, auto-login.
+        try {
+          const cookieUser = await authUserFromCookie(req);
+          if (cookieUser) {
+            await session.loginUser(cookieUser);
+            await session.goto(new MainMenuModule());
+          } else {
+            await session.goto(new LoginModule());
+          }
+        } catch {
+          await session.goto(new LoginModule());
+        }
+      } catch (err) {
+        req.log.error({ err }, 'failed to initialize bbs websocket session');
+        try {
+          socket.close(1011, 'server error');
+        } catch {}
+      }
+    })();
+  }
 });
 
 // Start

@@ -1,6 +1,6 @@
 {
   "name": "webbbs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Classic 1992-style BBS experience in a web interface (Dockerized).",
@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "prisma:generate": "prisma generate",
     "bootstrap": "node scripts/bootstrap.mjs",
-    "docker:start": "sh scripts/docker-start.sh"
+    "docker:start": "sh scripts/docker-start.sh",
+    "test": "node --test"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

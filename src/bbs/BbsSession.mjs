@@ -4,7 +4,7 @@ import { ANSI } from '../lib/ansi.mjs';
 export class BbsSession {
   /**
    * @param {{
-   *  conn: any,
+   *  socket: any,
    *  prisma: any,
    *  config: any,
    *  doorRegistry: Map<string, any>,
@@ -16,8 +16,7 @@ export class BbsSession {
    */
   constructor(opts) {
     this.id = randomUUID();
-    this.conn = opts.conn;
-    this.socket = opts.conn.socket;
+    this.socket = opts.socket;
     this.prisma = opts.prisma;
     this.config = opts.config;
     this.doorRegistry = opts.doorRegistry;
