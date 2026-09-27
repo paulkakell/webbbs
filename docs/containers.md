@@ -17,8 +17,8 @@ Download these two files into a new directory. This does not require Git or a Do
 
 ```sh
 mkdir webbbs && cd webbbs
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.01/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.01/.env.ghcr.example -o .env
+curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.02/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
+curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.02/.env.ghcr.example -o .env
 chmod 600 .env
 openssl rand -hex 24
 openssl rand -hex 24
@@ -65,7 +65,7 @@ The publishing workflow uses its short-lived `GITHUB_TOKEN` with
 
 | Variable | Default / example | Purpose |
 | --- | --- | --- |
-| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.03.01` | Fixed release; use an `@sha256:...` reference from the workflow summary for exact bytes. |
+| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.03.02` | Fixed release; use an `@sha256:...` reference from the workflow summary for exact bytes. |
 | `POSTGRES_PASSWORD` | Required | Existing database password or a new hex password; username/database remain `bbs`. |
 | `SYSOP_PASSWORD` | Required | Bootstrap administrator password; changing it is not a guaranteed existing-account password reset. |
 | `SYSOP_HANDLE` | `sysop` | Bootstrap account name, for example `paul`. |
@@ -76,7 +76,7 @@ The publishing workflow uses its short-lived `GITHUB_TOKEN` with
 | `SESSION_TTL_DAYS` | `7` | Web session lifetime; for example `1` for shorter sessions. |
 | `ALLOW_REGISTRATION` | `true` | Bootstrap setting; set `false` for closed registration and review persisted settings in Admin. |
 
-The image is published with padded release tags (`00.03.01`), full commit tags
+The image is published with padded release tags (`00.03.02`), full commit tags
 (`sha-<40-character-commit>`), and a moving `latest` alias. Prefer version or
 digest references for production. Reusing a version from another commit is
 rejected when the existing registry manifest can be read. Digest references,
@@ -96,7 +96,7 @@ are retained. The original `docker-compose.yml` remains the source-build option.
 For subsequent image upgrades, record the old digest, change `WEBBBS_IMAGE`,
 then run `pull` and `up -d`. Roll back by restoring the recorded digest and
 running the same commands. Never use `down -v` on production data.
-Release 00.03.01 does not alter the schema, but startup still runs Prisma
+Release 00.03.02 does not alter the schema, but startup still runs Prisma
 `db push`. Image rollback alone is not a database rollback for future schema changes.
 Before the first GHCR release, rollback means using the `v00.02.00` source
 release with its original Compose file and the preserved data, not a nonexistent
@@ -121,5 +121,6 @@ preserve published digests. OS-package scanning and full production load testing
 are not provided by the npm audit. The image retains the existing root-user
 runtime and toolchain; this release is not a complete hardening certification.
 
-Release `00.03.00` was source-only: the dependency audit blocked its container
-publication. Use `00.03.01`, not an assumed `00.03.00` GHCR tag.
+Releases `00.03.00` and `00.03.01` were source-only: dependency findings blocked
+the first, and a malformed request in the new integration test blocked the
+second. Use `00.03.02`; neither earlier version is an available GHCR tag.

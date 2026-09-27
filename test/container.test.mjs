@@ -56,3 +56,12 @@ test('security fixes retain patched dependency minimums and static guard checks'
   assert.ok(read('scripts/smoke-container.mjs').includes("import('./smoke-static.mjs')"));
   assert.ok(read('scripts/smoke-static.mjs').includes('/other/%2e%2e/protected/secret.txt'));
 });
+
+// Empty-body DELETE and logout requests must not advertise an empty JSON body.
+test('smoke requests reserve JSON content type for requests carrying JSON', () => {
+  const smoke = read('scripts/smoke-container.mjs');
+  const sharedHeaders = smoke.match(/const headers = (\{[^;\n]+.*\});/);
+  assert.ok(sharedHeaders, 'Shared session headers exist');
+  assert.doesNotMatch(sharedHeaders[1], /content-type/);
+  assert.ok(smoke.includes("method: 'POST', headers: { ...headers, 'content-type': 'application/json' }"));
+});

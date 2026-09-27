@@ -1,6 +1,6 @@
 # webBBS
 
-## Version 00.03.01
+## Version 00.03.02
 
 A Dockerized, web-served recreation of a classic early-90s BBS experience.
 
@@ -36,7 +36,7 @@ Key goals:
 
 ## Quick start: prebuilt GHCR image
 
-Use `ghcr.io/paulkakell/webbbs:00.03.01` on Linux amd64. Download
+Use `ghcr.io/paulkakell/webbbs:00.03.02` on Linux amd64. Download
 `docker-compose.ghcr.yml` and `.env.ghcr.example` from this release, then:
 
 ```sh

@@ -32,12 +32,12 @@ const loggedIn = await login({ handle, password });
 assert.equal(loggedIn.status, 200, 'Bootstrapped sysop login');
 const setCookie = loggedIn.headers.get('set-cookie') || '';
 assert.match(setCookie, /HttpOnly/i);
-const headers = { cookie: setCookie.split(';')[0], 'content-type': 'application/json' };
+const headers = { cookie: setCookie.split(';')[0] };
 assert.equal((await request('/api/admin/config', { headers })).status, 200);
 let boardId;
 try {
   const created = await request('/api/admin/boards', {
-    method: 'POST', headers,
+    method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
     body: JSON.stringify({ name: `CI smoke ${Date.now()}`, description: 'Disposable integration test' })
   });
   assert.equal(created.status, 200);

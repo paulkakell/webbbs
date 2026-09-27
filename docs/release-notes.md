@@ -3,18 +3,20 @@ title: Release notes
 permalink: /release-notes/
 ---
 
-# Release 00.03.01
+# Release 00.03.02
 
 Date: September 27, 2026. Classification: additive deployment feature and container maintenance fixes.
 
 ## Container publication
 
-The prior source release `00.03.00` exists, but its image was not published.
-Run `36356970007` stopped at the blocking dependency audit. This patch retains
-that check, updates the two affected dependencies, and adds static-file guard
-regression checks. No existing tag is moved.
+The source releases `00.03.00` and `00.03.01` exist, but neither image was
+published. Run `36356970007` stopped on dependency findings; run `36357237595`
+passed the audit but exposed an empty-body JSON request in the new integration
+client. This patch corrects test headers without relaxing assertions. Dependency
+security fixes, static-route guard checks, and publication gates remain intact.
+No existing source tag is moved.
 
-Publish `ghcr.io/paulkakell/webbbs:00.03.01` for `linux/amd64`, together with
+Publish `ghcr.io/paulkakell/webbbs:00.03.02` for `linux/amd64`, together with
 `sha-<full-commit>` and `latest` tags. The GHCR workflow validates, builds, audits,
 and integration-tests before pushing, then pulls the image and records its
 content digest. GitHub's initial package visibility is private; public access
@@ -36,7 +38,7 @@ No migration script or schema change is introduced. Existing volumes and
 credentials must be preserved when switching deployment files. Startup still
 runs Prisma `db push`, so backups remain necessary before upgrades.
 
-Eight deployment regression tests cover version consistency, credential
+Nine deployment regression tests cover version consistency, credential
 requirements, storage compatibility, publication gates, credential handling,
 secret exclusions, and integration-check coverage. Disposable-stack checks
 exercise PostgreSQL startup, sysop login, invalid requests, unauthorized access,
@@ -74,9 +76,10 @@ remain available with that source tag. No issue number was supplied for this req
 ## Commit notes
 
 ```text
-fix(security): unblock GHCR publication for webBBS 00.03.01
+fix(ci): correct container smoke requests for webBBS 00.03.02
 
-Add versioned Linux amd64 images and a standalone image-only Compose deployment.
+Correct empty-body smoke requests without changing application behavior.
+Retain versioned Linux amd64 images and standalone image-only Compose deployment.
 Gate publication on tests, syntax/config checks, npm audit, and PostgreSQL smoke tests.
 Record image revision and digest; keep source-build compatibility and prior tags.
 Use Node 22, require deployment passwords, and exclude secrets from build context.

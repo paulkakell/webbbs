@@ -1,5 +1,16 @@
 # Changelog
 
+## 00.03.02 (2026-09-27)
+
+Fix
+- Correct the new integration client's shared headers: send JSON content type only with a JSON body, not on empty-body DELETE and logout requests. Keep the expected success and session-revocation assertions.
+- Add a regression check preventing empty JSON headers from returning. Preserve the dependency security fixes and blocking audit.
+- Update all current installation references to `00.03.02`. Versions `00.03.00` and `00.03.01` are source-only releases; neither published a GHCR image.
+
+Traceability and compatibility
+- Corrects test-client commit `1a20ad04fdefb2330763b446339440eef09a0d3f`, failed publication run `36357237595`. Startup, static assets and guards, login, authorization, and database writes passed before the malformed DELETE request.
+- Test-only fix plus release metadata; no application API, schema, dependency, or production data changes relative to `00.03.01`. No issue number supplied. Existing tags are not moved.
+
 ## 00.03.01 (2026-09-27)
 
 Fix
