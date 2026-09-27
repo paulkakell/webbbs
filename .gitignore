@@ -4,3 +4,10 @@ node_modules/
 *.log
 /data/
 public/vendor/
+_site/
+docs/_site/
+.jekyll-cache/
+docs/.jekyll-cache/
+.sass-cache/
+.bundle/
+.data/

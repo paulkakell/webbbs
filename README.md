@@ -1,6 +1,6 @@
 # webBBS
 
-## Version 00.01.02
+## Version 00.02.00
 
 A Dockerized, web-served recreation of a classic early-90s BBS experience.
 
@@ -101,3 +101,33 @@ On startup, the server scans `./doors` and loads door packages. Sysop/Admin can 
 - This repository is intentionally modular. Most sysop/admin operations are implemented, but the “classic BBS” UI can be extended significantly (newscan pointers, message base indexing, ANSI art packs, external PTY doors, etc.).
 - File transfer is performed via browser download/upload, but initiated and controlled from within the BBS UI.
 
+## Documentation and GitHub Pages
+
+The [Jekyll documentation site](https://paulkakell.github.io/webbbs/) contains
+[getting-started instructions](docs/getting-started.md), [security guidance](docs/security.md),
+and [release notes with rollback procedures](docs/release-notes.md).
+GitHub Pages hosts documentation only, not the running Node.js BBS.
+
+Edit `docs/` and push to `main` to publish. Pull requests run checks and build
+previews without deploying. Pages must use **GitHub Actions** as its source.
+Configuration and local-build examples are in `docs/getting-started.md`.
+
+## Security and validation
+
+Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+CodeQL scans application code. Dependabot proposes npm, GitHub Actions, and
+Docker updates weekly; alert settings are separate and no updates auto-merge.
+
+```sh
+npm test              # all checked-in tests
+npm run check         # syntax, version, workflow, and configuration checks
+npm run pages:verify  # generated _site artifact and local links
+```
+
+CI also builds the existing Dockerfile from a fresh image and reports the npm
+dependency-audit result. A successful build is not a clean security audit;
+review audit warnings separately. No production credentials are needed.
+
+Release versions use `xx.xx.xx`; npm uses the equivalent unpadded semver.
+The workflow creates a matching version tag and release after validation,
+application build, and Pages deployment. Existing tags are never moved.

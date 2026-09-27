@@ -1,0 +1,22 @@
+title: webBBS
+description: A classic BBS experience, built for the web.
+url: https://paulkakell.github.io
+baseurl: /webbbs
+repository: paulkakell/webbbs
+release_version: '00.02.00'
+lang: en
+theme: jekyll-theme-hacker
+show_downloads: false
+markdown: kramdown
+permalink: pretty
+strict_front_matter: true
+safe: true
+defaults:
+  - scope:
+      path: ''
+    values:
+      layout: default
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock

@@ -1,5 +1,26 @@
 # Changelog
 
+## 00.02.00 (2026-09-27)
+
+Additive
+- Add a Jekyll project documentation site under `docs/`, including deployment, security, maintenance, release, and rollback guidance.
+- Configure weekly Dependabot version updates for npm, GitHub Actions, and Docker; alerts remain a separate repository setting.
+- Add Pages artifact regression tests, JavaScript syntax/configuration checks, fresh Docker build validation, and dependency audit reporting.
+- Create versioned GitHub releases after successful main-branch checks and Pages deployment; never move existing tags.
+
+Fix
+- Restrict Pages publishing to `docs/` instead of the repository root, validate local links, pin Actions to commit SHAs, and scope deployment credentials to the deploy job.
+- Align `VERSION`, README, Jekyll, and npm release metadata at `00.02.00` / `0.2.0`.
+
+Traceability
+- User request: retry security configuration and configure GitHub Pages Jekyll.
+- Retain security policy commit `dc66a42d106c28ee8bfb0276496bdbb301e17af3` and CodeQL commit `212c0a07f6fed3df6740f375250dc66b29f8d5d8`.
+- Baseline commit: `8680fdc292cf1c95658739c74020a41896e4b477`. No issue number was supplied.
+
+Compatibility
+- Additive repository tooling and documentation; no breaking runtime, API, CLI, database, or environment changes.
+- Application dependency ranges are unchanged. Audit findings and missing admin access are reported, not treated as successful verification.
+
 ## 00.01.02 (2026-02-21)
 
 Fix
