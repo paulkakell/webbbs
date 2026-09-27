@@ -1,5 +1,12 @@
 node_modules
-npm-debug.log
+.git
+.github
 .env
-/data
-public/vendor
+.env.*
+.data
+data
+_site
+coverage
+*.log
+*.pem
+*.key

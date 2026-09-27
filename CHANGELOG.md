@@ -1,5 +1,24 @@
 # Changelog
 
+## 00.03.00 (2026-09-27)
+
+Additive
+- Publish tested Linux amd64 images to `ghcr.io/paulkakell/webbbs` with padded version, full commit, and latest tags. Record the pulled-back registry digest for traceability.
+- Add a standalone GHCR Compose file and environment template so installation no longer requires a local Dockerfile. Preserve the original source-build Compose file.
+- Add seven deployment regression tests and disposable PostgreSQL integration checks covering startup, login validation, authorization, database writes, logout, and WebSocket upgrades.
+- Document package visibility, all deployment variables, existing-volume migration, release pinning, and rollback. Require explicit passwords and default new deployments to loopback binding.
+
+Fix
+- Move the container from end-of-life Node 20 to the Node 22 LTS line and exclude common secret/data paths from Docker's build context.
+- Block image publication on npm audit findings across all shipped dependencies, including the runtime Prisma CLI.
+- Align release metadata at `00.03.00` / `0.3.0`.
+
+Traceability and compatibility
+- User request: publish the application to GHCR after the Compose-only installation failed to find Dockerfile. No issue number supplied.
+- Baseline: `66ed37f90d1442b8882723fbba05176b3b6e47f9`; release commit is identified by `v00.03.00` and the image revision label.
+- Additive deployment path; existing Compose, API, database schema, and application dependency ranges are unchanged. Node runtime changes only in the container. No database migration is introduced.
+- New package visibility remains a separate owner setting. Published digests are the exact rollback artifacts; source rebuilds remain unlocked.
+
 ## 00.02.00 (2026-09-27)
 
 Additive

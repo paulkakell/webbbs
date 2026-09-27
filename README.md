@@ -1,6 +1,6 @@
 # webBBS
 
-## Version 00.02.00
+## Version 00.03.00
 
 A Dockerized, web-served recreation of a classic early-90s BBS experience.
 
@@ -34,32 +34,52 @@ Key goals:
   - manage boards, file areas
   - install/enable doors
 
-## Quick start (Docker)
+## Quick start: prebuilt GHCR image
 
-1) Set sysop credentials (recommended):
+Use `ghcr.io/paulkakell/webbbs:00.03.00` on Linux amd64. Download
+`docker-compose.ghcr.yml` and `.env.ghcr.example` from this release, then:
 
-Create a `.env` file (or edit docker-compose env values):
-
+```sh
+cp .env.ghcr.example .env
+chmod 600 .env
+# Generate two separate passwords, then enter them in .env.
+openssl rand -hex 24
+openssl rand -hex 24
+# Edit POSTGRES_PASSWORD and SYSOP_PASSWORD before continuing.
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
 ```
-SYSOP_HANDLE=sysop
-SYSOP_PASSWORD=change-me-now
+
+No Git checkout, Dockerfile, or local build is needed. New GHCR packages default
+to private; the owner must make the package public for anonymous pulls, or users
+must run `docker login ghcr.io` with a classic token having `read:packages`.
+The [container guide](docs/containers.md) includes download commands, all settings,
+existing-installation migration, authentication, and rollback.
+
+Open `http://localhost:3000/bbs` or `http://localhost:3000/admin` after startup.
+The new Compose file binds to loopback by default. Set `BIND_ADDRESS=0.0.0.0`
+for access from other machines, with appropriate firewall and HTTPS protection.
+Keep existing volume paths and credentials when switching an existing install.
+
+## Alternative: build from source
+
+The original `docker-compose.yml` still uses `build: .` and requires the complete
+repository, not just the Compose file:
+
+```sh
+git clone https://github.com/paulkakell/webbbs.git
+cd webbbs
+cp .env.example .env
+mkdir -p .data/postgres .data/files
+printf '\nDB_VOLUME=%s/.data/postgres\nAPP_VOLUME=%s/.data/files\n' "$PWD" "$PWD" >> .env
+# Edit .env and set a unique SYSOP_PASSWORD before starting.
+docker compose up --build -d
 ```
 
-2) Start:
-
-```
-docker compose up --build
-```
-
-3) Open:
-- BBS: `http://localhost:3000/bbs`
-- Admin UI: `http://localhost:3000/admin`
-
-The server will:
-- wait for Postgres,
-- create/update tables (Prisma `db push`),
-- bootstrap the sysop account,
-- ensure default config exists.
+The original database credentials are for local setup, not internet-facing
+production. The server waits for Postgres, applies the Prisma schema with
+`db push`, bootstraps the sysop account, and ensures default configuration.
+Back up persistent data before upgrading.
 
 ## Reverse proxy notes (WebSockets)
 
@@ -75,12 +95,11 @@ proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection "Upgrade";
 ```
 
-
 ## Local dev (without Docker)
 
-Requires Node 20+ and Postgres.
+Requires Node 22+ and Postgres.
 
-```
+```sh
 cp .env.example .env
 npm install
 npm run vendor
@@ -104,8 +123,8 @@ On startup, the server scans `./doors` and loads door packages. Sysop/Admin can 
 ## Documentation and GitHub Pages
 
 The [Jekyll documentation site](https://paulkakell.github.io/webbbs/) contains
-[getting-started instructions](docs/getting-started.md), [security guidance](docs/security.md),
-and [release notes with rollback procedures](docs/release-notes.md).
+[getting-started instructions](docs/getting-started.md), [container installation](docs/containers.md),
+[security guidance](docs/security.md), and [release notes with rollback procedures](docs/release-notes.md).
 GitHub Pages hosts documentation only, not the running Node.js BBS.
 
 Edit `docs/` and push to `main` to publish. Pull requests run checks and build
@@ -124,10 +143,17 @@ npm run check         # syntax, version, workflow, and configuration checks
 npm run pages:verify  # generated _site artifact and local links
 ```
 
-CI also builds the existing Dockerfile from a fresh image and reports the npm
-dependency-audit result. A successful build is not a clean security audit;
-review audit warnings separately. No production credentials are needed.
+The GHCR workflow runs these repository tests and syntax checks, builds a fresh
+image, audits all shipped npm dependencies, and tests a disposable PostgreSQL
+stack before publication. Authentication, authorization, database writes,
+session revocation, and WebSocket upgrades are covered by the smoke check.
+Its summary records the verified digest; npm audit is not an OS-package scan.
+Dependency ranges remain unlocked, so use published digests rather than assuming
+source rebuilds produce identical images.
 
 Release versions use `xx.xx.xx`; npm uses the equivalent unpadded semver.
-The workflow creates a matching version tag and release after validation,
-application build, and Pages deployment. Existing tags are never moved.
+The Pages workflow creates the matching source tag and release after its own
+validation, application build, and deployment. The GHCR workflow independently
+publishes version/commit image tags and updates `latest` only for current main.
+Check both workflows: a source release alone does not prove the image was pushed.
+Existing source tags are never moved.

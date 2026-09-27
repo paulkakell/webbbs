@@ -3,63 +3,77 @@ title: Release notes
 permalink: /release-notes/
 ---
 
-# Release 00.02.00
+# Release 00.03.00
 
-Date: September 27, 2026. Classification: additive, with release-metadata fixes.
-No breaking application API, CLI, configuration, or database changes.
+Date: September 27, 2026. Classification: additive deployment feature and container maintenance fixes.
 
-## Added
+## Container publication
 
-A Jekyll documentation site with project overview, Docker setup, site maintenance,
-security guidance, and release notes. GitHub Pages publishes only `docs/` and
-validates generated links and artifacts before deployment.
+Publish `ghcr.io/paulkakell/webbbs:00.03.00` for `linux/amd64`, together with
+`sha-<full-commit>` and `latest` tags. The GHCR workflow validates, builds, audits,
+and integration-tests before pushing, then pulls the image and records its
+content digest. GitHub's initial package visibility is private; public access
+requires the package owner to change package visibility. A successful source
+release does not alone prove the separate container workflow passed.
 
-Dependabot version-update checks cover npm, GitHub Actions, and Docker. The
-Pages workflow runs all checked-in tests, repository configuration checks, a
-fresh application image build, and an npm dependency audit. Deployment and
-release permissions are confined to separate main-branch jobs.
+The [GHCR deployment guide]({{ '/containers/' | relative_url }}) explains
+installation using only Compose and an environment file, configuration,
+authentication, upgrades, and rollback. The original source-build Compose
+entry point is unchanged. New standalone deployments require explicit database
+and sysop passwords and bind to loopback unless configured otherwise.
 
-The security policy and CodeQL workflow from commits
-`dc66a42d106c28ee8bfb0276496bdbb301e17af3` and
-`212c0a07f6fed3df6740f375250dc66b29f8d5d8` are retained.
+## Changes and compatibility
 
-## Fixed
+The image uses Node 22 LTS instead of Node 20. Application dependency ranges,
+API endpoints, database schema, and existing configuration names are unchanged.
+No migration script or schema change is introduced. Existing volumes and
+credentials must be preserved when switching deployment files. Startup still
+runs Prisma `db push`, so backups remain necessary before upgrades.
 
-Release metadata is synchronized: `VERSION`, README, and Jekyll use `00.02.00`;
-`package.json` uses its npm-compatible equivalent, `0.2.0`.
-The Pages build no longer copies the application repository root into the site.
-The theme head include omits its nonexistent favicon; generated-link validation
-remains enforced and includes a regression test for that failure.
+Seven deployment regression tests cover version consistency, credential
+requirements, storage compatibility, publication gates, credential handling,
+secret exclusions, and integration-check coverage. Disposable-stack checks
+exercise PostgreSQL startup, sysop login, invalid requests, unauthorized access,
+board writes, session revocation, and WebSocket upgrades. A 20-request timing
+measurement is a smoke check, not a capacity claim. Existing CodeQL and Pages
+checks continue to run. npm audit includes every shipped dependency and blocks
+GHCR publication on findings; it is not an operating-system vulnerability scan.
 
-## Validation and limitations
-
-Consult the Actions run for the release commit for actual pass/fail results;
-this page documents configured checks, not an assertion that a scan found no
-vulnerabilities. There were no integration or load-test suites in the baseline.
-Application dependency ranges, database schema, authentication, authorization,
-and logging code are unchanged. No application load test is required for the
-static documentation change. The existing Dockerfile uses dependency ranges
-without a committed npm lockfile, so fresh resolutions can change over time.
-Dependency audit findings are reported separately and are not automatically fixed.
+Consult the release commit's Actions runs for actual results. There is still
+no committed npm lockfile and source rebuilds may resolve different versions.
+Use image digests for reproducible deployment. Root-user execution and the
+existing compiler toolchain remain in the image; no complete container
+hardening claim is made. Authentication and logging code are unchanged.
 
 ## Rollback
 
-The pre-change main commit is
-`8680fdc292cf1c95658739c74020a41896e4b477`.
-To revert all commits in this release, inspect the range from that baseline to
-the release tag, then revert the range without rewriting history:
+Record the current image digest and back up PostgreSQL plus uploads before an
+upgrade. Restore the prior digest in `WEBBBS_IMAGE`, then run:
 
 ```sh
-git revert --no-commit 8680fdc292cf1c95658739c74020a41896e4b477..v00.02.00
-git commit -m "revert: roll back 00.02.00 documentation and tooling"
-git push origin main
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-Keep existing release tags intact. A full revert also restores the old
-root-source Pages workflow; to roll back only content while preserving
-isolation, restore the prior desired `docs/` content instead and publish a new
-bug-fix version.
+Preserve volume paths and database credentials; do not delete production
+volumes. This is the first GHCR release, so there is no older GHCR image to
+assume exists. The prior source release `v00.02.00`, at baseline
+`66ed37f90d1442b8882723fbba05176b3b6e47f9`, remains the initial rollback path
+using its original Dockerfile and Compose configuration. Later rollback can use
+retained GHCR digests. Image rollback cannot reverse a future schema migration.
 
-No database migration or data rollback is involved. The previous source remains
-available in Git history. GitHub Pages does not guarantee indefinite retention
-of deployment artifacts; do not rely on Actions artifact retention for backups.
+[Previous release notes](https://github.com/paulkakell/webbbs/blob/v00.02.00/docs/release-notes.md)
+remain available with that source tag. No issue number was supplied for this request.
+
+## Commit notes
+
+```text
+feat(container): publish webBBS 00.03.00 to GHCR
+
+Add versioned Linux amd64 images and a standalone image-only Compose deployment.
+Gate publication on tests, syntax/config checks, npm audit, and PostgreSQL smoke tests.
+Record image revision and digest; keep source-build compatibility and prior tags.
+Use Node 22, require deployment passwords, and exclude secrets from build context.
+Update version metadata, changelog, installation guide, and rollback notes.
+No application API, dependency-range, or database schema changes.
+```

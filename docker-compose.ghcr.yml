@@ -1,0 +1,36 @@
+# Standalone installation: no source checkout or Dockerfile is needed.
+services:
+  webbbs_db:
+    container_name: webbbs_db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bbs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: bbs
+    volumes:
+      - ${DB_VOLUME:-./.data/postgres}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bbs -d bbs"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  webbbs_app:
+    container_name: webbbs_app
+    image: ${WEBBBS_IMAGE:-ghcr.io/paulkakell/webbbs:00.03.00}
+    restart: unless-stopped
+    depends_on:
+      webbbs_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://bbs:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@webbbs_db:5432/bbs?schema=public
+      PORT: "3000"
+      DATA_DIR: /data
+      SYSOP_HANDLE: ${SYSOP_HANDLE:-sysop}
+      SYSOP_PASSWORD: ${SYSOP_PASSWORD:?Set a unique SYSOP_PASSWORD in .env}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    volumes:
+      - ${APP_VOLUME:-./.data/files}:/data

@@ -1,0 +1,130 @@
+name: Publish GHCR container
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghcr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm test
+      - run: npm run check
+      - name: Parse deployment and workflow YAML
+        run: |
+          ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f, aliases: true) }' docker-compose*.yml .github/workflows/*.yml
+
+  publish:
+    needs: validate
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      WEBBBS_IMAGE: webbbs:${{ github.sha }}
+      BIND_ADDRESS: 127.0.0.1
+      PORT: '3000'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build fresh Linux amd64 image with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cat VERSION)
+          [[ "$version" =~ ^[0-9]{2}\.[0-9]{2}\.[0-9]{2}$ ]]
+          docker build --pull --no-cache --platform linux/amd64 \
+            --label "org.opencontainers.image.version=$version" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$WEBBBS_IMAGE" .
+      - name: Audit all shipped npm dependencies including Prisma CLI
+        run: docker run --rm --entrypoint npm "$WEBBBS_IMAGE" audit --audit-level=low
+      - name: Reject missing deployment credentials and initialize disposable stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker compose --env-file /dev/null -f docker-compose.ghcr.yml config --quiet 2>/dev/null; then
+            echo '::error::Compose must reject missing passwords'
+            exit 1
+          fi
+          echo "DB_VOLUME=$RUNNER_TEMP/webbbs-db" >> "$GITHUB_ENV"
+          echo "APP_VOLUME=$RUNNER_TEMP/webbbs-files" >> "$GITHUB_ENV"
+          db_password=$(openssl rand -hex 24)
+          sysop_password=$(openssl rand -hex 24)
+          echo "::add-mask::$db_password"
+          echo "::add-mask::$sysop_password"
+          echo "POSTGRES_PASSWORD=$db_password" >> "$GITHUB_ENV"
+          echo "SYSOP_PASSWORD=$sysop_password" >> "$GITHUB_ENV"
+      - name: Validate and run standalone Compose without building
+        run: |
+          docker compose --env-file /dev/null -f docker-compose.ghcr.yml config --quiet
+          docker pull postgres:16-alpine
+          docker compose --env-file /dev/null -f docker-compose.ghcr.yml up -d --no-build --pull never
+      - name: Test startup, authentication, authorization, database, and WebSockets
+        run: docker compose --env-file /dev/null -f docker-compose.ghcr.yml exec -T webbbs_app node scripts/smoke-container.mjs
+      - name: Publish version and commit tags, then verify remote digest
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cat VERSION)
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          # Never replace an existing version that belongs to another commit.
+          if docker manifest inspect "$image:$version" >/dev/null 2>&1; then
+            docker pull "$image:$version"
+            revision=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image:$version")
+            test "$revision" = "$GITHUB_SHA" || { echo '::error::Existing version belongs to a different commit; increment VERSION'; exit 1; }
+          else
+            docker tag "$WEBBBS_IMAGE" "$image:$version"
+            docker push "$image:$version"
+          fi
+          docker tag "$image:$version" "$image:sha-$GITHUB_SHA"
+          docker push "$image:sha-$GITHUB_SHA"
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$current_main" = "$GITHUB_SHA" ]; then
+            docker tag "$image:$version" "$image:latest"
+            docker push "$image:latest"
+          fi
+          docker pull "$image:$version"
+          digest=$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image:$version" | grep -F "$image@sha256:" | head -n 1)
+          test -n "$digest"
+          printf 'Image: `%s:%s`\n\nDigest: `%s`\n\nCommit: `%s`\n\nPlatform: `linux/amd64`\n' "$image" "$version" "$digest" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified published image: $digest"
+          mkdir -p "$RUNNER_TEMP/anonymous-docker"
+          if DOCKER_CONFIG="$RUNNER_TEMP/anonymous-docker" docker manifest inspect "$image:$version" >/dev/null 2>&1; then
+            echo 'Anonymous pull: available' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '::notice::Image is published, but anonymous access is unverified. New GHCR packages default to private; use package settings to make it public.'
+            echo 'Anonymous pull: not verified; check package visibility' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Show disposable stack logs on failure
+        if: failure()
+        run: docker compose --env-file /dev/null -f docker-compose.ghcr.yml logs --no-color --tail 100 || true
+      - name: Remove disposable stack
+        if: always()
+        run: docker compose --env-file /dev/null -f docker-compose.ghcr.yml down --volumes --remove-orphans || true

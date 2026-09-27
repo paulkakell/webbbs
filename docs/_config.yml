@@ -3,7 +3,7 @@ description: A classic BBS experience, built for the web.
 url: https://paulkakell.github.io
 baseurl: /webbbs
 repository: paulkakell/webbbs
-release_version: '00.02.00'
+release_version: '00.03.00'
 lang: en
 theme: jekyll-theme-hacker
 show_downloads: false
