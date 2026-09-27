@@ -28,6 +28,8 @@ The security policy and CodeQL workflow from commits
 Release metadata is synchronized: `VERSION`, README, and Jekyll use `00.02.00`;
 `package.json` uses its npm-compatible equivalent, `0.2.0`.
 The Pages build no longer copies the application repository root into the site.
+The theme head include omits its nonexistent favicon; generated-link validation
+remains enforced and includes a regression test for that failure.
 
 ## Validation and limitations
 
@@ -44,11 +46,19 @@ Dependency audit findings are reported separately and are not automatically fixe
 
 The pre-change main commit is
 `8680fdc292cf1c95658739c74020a41896e4b477`.
-Revert the release commit using `git revert <release-commit>` and push the revert
-to `main` to restore the previous workflow and files. Keep existing release tags
-intact. A full revert also restores the old root-source Pages workflow; to roll
-back only content while preserving isolation, restore the prior desired `docs/`
-content instead and publish a new bug-fix version.
+To revert all commits in this release, inspect the range from that baseline to
+the release tag, then revert the range without rewriting history:
+
+```sh
+git revert --no-commit 8680fdc292cf1c95658739c74020a41896e4b477..v00.02.00
+git commit -m "revert: roll back 00.02.00 documentation and tooling"
+git push origin main
+```
+
+Keep existing release tags intact. A full revert also restores the old
+root-source Pages workflow; to roll back only content while preserving
+isolation, restore the prior desired `docs/` content instead and publish a new
+bug-fix version.
 
 No database migration or data rollback is involved. The previous source remains
 available in Git history. GitHub Pages does not guarantee indefinite retention

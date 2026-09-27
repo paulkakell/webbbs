@@ -62,3 +62,11 @@ test('Pages workflow isolates docs and deploys only from main', () => {
   assert.match(workflow, /npm run pages:verify/);
   assert.doesNotMatch(workflow, /pull_request_target/);
 });
+
+test('theme head does not reference an absent favicon', (t) => {
+  const head = readFileSync('docs/_includes/head-custom.html', 'utf8');
+  assert.doesNotMatch(head, /<link[^>]+(?:favicon|rel=["']icon)/i);
+  const root = fixture(t);
+  writeFileSync(join(root, 'index.html'), '<link rel="icon" href="/webbbs/favicon.ico">');
+  assert.throws(() => verifyPages(root), /Broken local link/);
+});
