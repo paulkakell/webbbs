@@ -3,13 +3,18 @@ title: Release notes
 permalink: /release-notes/
 ---
 
-# Release 00.03.00
+# Release 00.03.01
 
 Date: September 27, 2026. Classification: additive deployment feature and container maintenance fixes.
 
 ## Container publication
 
-Publish `ghcr.io/paulkakell/webbbs:00.03.00` for `linux/amd64`, together with
+The prior source release `00.03.00` exists, but its image was not published.
+Run `36356970007` stopped at the blocking dependency audit. This patch retains
+that check, updates the two affected dependencies, and adds static-file guard
+regression checks. No existing tag is moved.
+
+Publish `ghcr.io/paulkakell/webbbs:00.03.01` for `linux/amd64`, together with
 `sha-<full-commit>` and `latest` tags. The GHCR workflow validates, builds, audits,
 and integration-tests before pushing, then pulls the image and records its
 content digest. GitHub's initial package visibility is private; public access
@@ -24,13 +29,14 @@ and sysop passwords and bind to loopback unless configured otherwise.
 
 ## Changes and compatibility
 
-The image uses Node 22 LTS instead of Node 20. Application dependency ranges,
-API endpoints, database schema, and existing configuration names are unchanged.
+The image uses Node 22 LTS instead of Node 20. The static-file plugin moves to `^10.1.5` and UUID to `^11.1.1` to resolve
+the two npm audit findings that blocked the `00.03.00` image. Fastify remains
+on 5.x; API endpoints, database schema, and existing configuration names are unchanged.
 No migration script or schema change is introduced. Existing volumes and
 credentials must be preserved when switching deployment files. Startup still
 runs Prisma `db push`, so backups remain necessary before upgrades.
 
-Seven deployment regression tests cover version consistency, credential
+Eight deployment regression tests cover version consistency, credential
 requirements, storage compatibility, publication gates, credential handling,
 secret exclusions, and integration-check coverage. Disposable-stack checks
 exercise PostgreSQL startup, sysop login, invalid requests, unauthorized access,
@@ -68,12 +74,12 @@ remain available with that source tag. No issue number was supplied for this req
 ## Commit notes
 
 ```text
-feat(container): publish webBBS 00.03.00 to GHCR
+fix(security): unblock GHCR publication for webBBS 00.03.01
 
 Add versioned Linux amd64 images and a standalone image-only Compose deployment.
 Gate publication on tests, syntax/config checks, npm audit, and PostgreSQL smoke tests.
 Record image revision and digest; keep source-build compatibility and prior tags.
 Use Node 22, require deployment passwords, and exclude secrets from build context.
 Update version metadata, changelog, installation guide, and rollback notes.
-No application API, dependency-range, or database schema changes.
+Patch vulnerable static-file and UUID dependencies; preserve application APIs and database schema.
 ```

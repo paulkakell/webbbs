@@ -14,6 +14,11 @@ for (let attempt = 0; attempt < 60; attempt++) {
 }
 assert.ok(ready, 'BBS startup did not complete');
 assert.equal((await request('/admin/login.html')).status, 200);
+for (const asset of ['/vendor/xterm/xterm.js', '/vendor/xterm/xterm.css',
+  '/vendor/xterm/xterm-addon-fit.js', '/css/main.css']) {
+  assert.equal((await request(asset)).status, 200, `Static asset ${asset}`);
+}
+await import('./smoke-static.mjs');
 assert.equal((await request('/api/admin/config')).status, 401, 'Anonymous admin access must fail');
 const login = (body) => request('/api/auth/login', {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)

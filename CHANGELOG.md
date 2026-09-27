@@ -1,5 +1,17 @@
 # Changelog
 
+## 00.03.01 (2026-09-27)
+
+Fix
+- Update `@fastify/static` to `^10.1.5` to address GHSA-8pvw-jcv7-9cmj and GHSA-83w8-p2f5-377r, and `uuid` to `^11.1.1` for GHSA-w5hq-g745-h8pq. Keep the blocking audit; do not force or bypass findings.
+- Add isolated static-file guard regression checks and verify the terminal assets in the disposable-stack integration test.
+- Correct GHCR installation references to `00.03.01`. The `00.03.00` source release exists, but its GHCR publication was correctly blocked by two dependency findings and no image was pushed.
+
+Traceability and compatibility
+- Corrects commit `b39ad40bf94ef2c9c407d1a62182df4d74c740f7`, publication run `36356970007`.
+- Dependency major versions changed for security fixes. Fastify remains on 5.x; test static serving, protected routes, startup, and sessions before publishing. UUID package APIs are not used by checked-in application code; Prisma and Node UUID generation are unchanged.
+- No application API, database schema, or production data changes. Existing source tags remain untouched; no `00.03.00` image is an available rollback target.
+
 ## 00.03.00 (2026-09-27)
 
 Additive

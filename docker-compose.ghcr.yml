@@ -17,7 +17,7 @@ services:
       retries: 30
   webbbs_app:
     container_name: webbbs_app
-    image: ${WEBBBS_IMAGE:-ghcr.io/paulkakell/webbbs:00.03.00}
+    image: ${WEBBBS_IMAGE:-ghcr.io/paulkakell/webbbs:00.03.01}
     restart: unless-stopped
     depends_on:
       webbbs_db:
