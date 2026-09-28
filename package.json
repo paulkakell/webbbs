@@ -19,7 +19,7 @@
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/formbody": "^8.0.2",
-    "@fastify/multipart": "^9.4.0",
+    "@fastify/multipart": "^10.1.2",
     "@fastify/static": "^10.1.5",
     "@fastify/websocket": "^11.2.0",
     "@prisma/client": "^5.21.1",
