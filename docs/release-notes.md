@@ -3,122 +3,123 @@ title: Release notes
 permalink: /release-notes/
 ---
 
-# Release 00.03.03
+# Release 00.04.00
 
-Date: September 27, 2026 (America/Denver). Classification: backward-compatible
-runtime fix, container packaging fix, and additive regression tests/documentation.
+[Home]({{ '/' | relative_url }}) | [Game guide]({{ '/bundled-doors/' | relative_url }}) | [Containers]({{ '/containers/' | relative_url }})
 
-## WebSocket correction
+## Included by default
 
-The server now uses `await fastify.register(websocket)` before declaring any
-application routes or registering static routes. Previously the plugin was only
-queued, so its route hooks were unavailable when `/ws/bbs` was defined. The
-container could start and serve HTTP pages while real WebSocket connections failed.
+World Conquest supplies territory strategy with 2-4 player shared matches and
+private CPU campaigns. Lantern Hollow supplies a nine-room shared adventure with
+three-second combat, room chat, equipment, and a quest. Modem Mogul supplies a
+saved BBS business with daily advances, equipment, staffing, events, and scores.
+All three are original native implementations, not third-party game distributions.
+The existing sample doors remain available.
 
-This corrects GHCR run `36357562249`, publish job `108728234624`, at baseline
-commit `57eaba2043291ae6874fa35a83db336d390607d4` (`00.03.02`). That run passed its
-build and dependency audit but stopped before publication at the WebSocket test.
-No issue number was supplied. The upstream
-[WebSocket plugin documentation](https://github.com/fastify/fastify-websocket#using-hooks)
-shows awaited registration before direct route declarations.
+New packages install and enable on startup. Existing disabled settings stay
+unchanged. Log in, select Doors, and use `HELP` in each game. The
+[game guide]({{ '/bundled-doors/' | relative_url }}) describes every command and
+limit. This is an additive feature release, using npm version `0.4.0`.
 
-The HTTP diagnostic still returns `426 Upgrade Required` for non-upgrade requests.
-Successful WebSocket connections must reach the anonymous `Handle:` prompt,
-process a blank-handle input, return the prompt, and close normally. A successful
-handshake or clear-screen frame alone is not sufficient for the new smoke test.
-The existing synchronous event attachment and authentication behavior are unchanged.
+## Upgrade
 
-The image also includes the repository's existing LICENSE file. All release
-metadata and current image references now use `00.03.03`; npm uses `0.3.3`.
-
-## Tests, security, and validation
-
-Nine new dependency-free unit tests exercise the WebSocket probe: successful
-round-trip, handshake-only failure, missing reply, connection error, malformed
-JSON, malformed ANSI data, output limits, timeout cleanup, and invalid deadlines.
-A tenth regression check enforces awaited registration before direct/static routes
-and confirms the live integration probe and plain-HTTP diagnostic remain enabled.
-These extend the existing 23-test suite without adding dependencies.
-
-The GHCR workflow runs the complete unit/regression suite, repository syntax and
-version checks, YAML validation, a fresh Linux amd64 image build, a blocking audit
-of every shipped npm dependency, and the disposable PostgreSQL integration suite.
-The integration suite retains login validation, anonymous admin denial, database
-writes/deletes, cookie checks, session revocation, static-file guard checks, and
-the 20-request HTTP timing check. Probe results and timing use structured JSON.
-CodeQL and Jekyll build/link validation continue in their existing workflows.
-
-Actual pass/fail results, image digest, and anonymous-pull status must be read
-from the release commit's Actions runs. This document does not treat a configured
-check or a successful source release as proof of successful container publication.
-Local validation covered the nine new probe tests and their JavaScript syntax;
-Docker and external network access were unavailable in the editing environment,
-so full build/runtime checks run on GitHub's clean hosted runners.
-
-Security review: this patch does not relax authentication, authorization, request
-validation, cookie handling, upload paths, or existing logging. The anonymous
-probe sends no passwords; it uses a blank handle and bounds output to 65,536
-characters with a default 10,000 ms deadline. Workflow permissions, secret masking,
-and publication gates are retained. npm audit is not an operating-system scan,
-and CodeQL completion alone is not a certification of vulnerability-free code.
-No dedicated linter/type-checker is configured; syntax/configuration checks and
-CodeQL provide the existing static-analysis coverage. No production load benchmark
-or deployment/rollback exercise is claimed by the HTTP timing smoke check.
-
-## Compatibility and deployment
-
-No application API, WebSocket message format, CLI flag, environment variable,
-database schema, or dependency-range changes relative to `00.03.02` are introduced.
-There are no migrations to apply or reverse. The repository still has no committed
-npm lockfile; source rebuilds can resolve different dependencies. Preserve exact
-image digests for repeatable deployment. The earlier static/UUID security fixes
-remain in place. Root-user execution and the compiler toolchain remain unchanged.
-
-After GHCR publication succeeds, set this value in the existing `.env`:
-
-```dotenv
-WEBBBS_IMAGE=ghcr.io/paulkakell/webbbs:00.03.03
-```
-
-Then update without changing credentials or storage:
+Retain the currently running image and take a database backup before proceeding.
+Keep existing `.env`, passwords, host port, network definitions, and volume paths.
+The following examples assume the standard Compose service and database names:
 
 ```sh
-docker compose -f docker-compose.ghcr.yml pull
-docker compose -f docker-compose.ghcr.yml up -d
+# Keep this backup private: it contains account and BBS data.
+umask 077
+docker compose -f docker-compose.ghcr.yml exec -T webbbs_db \
+  pg_dump -U bbs -d bbs > webbbs-before-00.04.00.sql
+# Record the exact current image ID/digest before pulling a new version.
+docker compose -f docker-compose.ghcr.yml images --quiet webbbs_app
+# Save the current image by that ID to a local archive as an additional safeguard.
+# docker image save <recorded-image-id> -o webbbs-previous-image.tar
 ```
 
-Source installations update their checkout and rebuild with
-`docker compose up -d --build`. See the
-[container installation guide]({{ '/containers/' | relative_url }}) for all
-options, password setup, package authentication, and WebSocket diagnostics.
-GitHub package visibility is separate from successful publication.
+Set `WEBBBS_IMAGE=ghcr.io/paulkakell/webbbs:00.04.00` only after the GHCR workflow
+has published it, then pull and recreate the app. Keep a record of the verified
+digest. The existing startup `prisma db push` adds DoorSave without changing
+existing tables. `ops/00.04.00-up.sql` provides an optional idempotent explicit SQL
+equivalent. Do not run a migration tool and application startup concurrently.
 
-## Rollback
+```sh
+docker compose -f docker-compose.ghcr.yml pull webbbs_app
+docker compose -f docker-compose.ghcr.yml up -d webbbs_app
+```
 
-Record the current digest and back up PostgreSQL and uploaded files before
-upgrading. Restore a previously verified, retained image digest in `WEBBBS_IMAGE`
-and run the same `pull` and `up -d` commands. Preserve volume paths, database
-credentials, and the Compose project name. Never delete production volumes.
-Startup still runs Prisma `db push`, even though this patch changes no schema.
+No additional environment variables or dependency changes are required. Source
+builds remain unlocked because the baseline repository has no npm lockfile.
+Use published digests or retain your own tested image rather than assuming that
+rebuilding the same source later produces the same dependency set.
 
-The original `00.03.00` through `00.03.02` runs did not publish GHCR images, so
-those tags are not assumed to be image rollback targets. Prior source release
-`v00.03.02` remains available at the baseline commit, but restores this known
-WebSocket defect; `v00.02.00` also predates the container dependency security fixes.
-Use retained known-good deployment artifacts where available rather than treating
-an older source tag as a proven working or secure runtime. Existing source tags
-are never moved. Rollback has been reviewed, not executed on a production host.
+## Roll back without deleting game saves
+
+Download the `ops/` SQL files from the 00.04.00 source release before attempting a
+rollback. Stop application writes first. Do not delete database volumes, and do
+not add `--accept-data-loss` to the old startup command.
+
+```sh
+docker compose -f docker-compose.ghcr.yml stop webbbs_app
+docker compose -f docker-compose.ghcr.yml exec -T webbbs_db \
+  psql -v ON_ERROR_STOP=1 -U bbs -d bbs < ops/00.04.00-rollback.sql
+```
+
+The rollback script moves DoorSave into the `webbbs_rollback_000400` schema and
+disables the three new package entries. Existing BBS records are not modified.
+The script refuses to overwrite an existing archive. Set `WEBBBS_IMAGE` to the
+previous verified image digest or load your retained image archive, then recreate
+the application. The old schema no longer sees an unexpected public DoorSave
+table. A previous source tag alone is not proof of an available image.
+
+To return to 00.04.00 and restore saved progress, stop the old application and run:
+
+```sh
+docker compose -f docker-compose.ghcr.yml exec -T webbbs_db \
+  psql -v ON_ERROR_STOP=1 -U bbs -d bbs < ops/00.04.00-restore.sql
+```
+
+Restore before starting 00.04.00; it must not have created a second public
+DoorSave table. If both copies exist, the script fails rather than discarding
+either one. Resolve that case from backups deliberately. Restore does not
+re-enable games: review and enable them individually in Admin.
+
+## Validation and operational review
+
+`npm test` includes all existing tests and the new door suite. `npm run check`
+checks JavaScript syntax and release/workflow configuration. CI runs fresh image
+builds, a blocking dependency audit, the existing authentication and WebSocket
+checks, and the new disposable door integration checks. CodeQL and Pages checks
+are retained. The integration test exercises real conflicting writes, persistence
+through a second client, disabled-door rejection, idempotent upgrade SQL, old-model
+`db push` after archival, and save-preserving restoration.
+
+Run `scripts/smoke-doors.mjs` only in a disposable stack with
+`WEBBBS_DOOR_INTEGRATION=1`. It refuses a database already containing game saves.
+It creates test accounts and game data and temporarily changes the game schema.
+The script is not a production health check. CI results, not this prose, establish
+whether a particular release commit passed. A Pages/source release alone does
+not establish successful GHCR publication.
+
+No new authentication endpoints, external services, or secrets are introduced.
+Runtime game errors are structured and omit game text and credentials. Shared
+world state is intended for a small BBS; engine timing is not a concurrency/load
+capacity claim. See the game guide for rate, presence, storage, and retention limits.
 
 ## Commit notes
 
 ```text
-fix(websocket): restore BBS connections in 00.03.03
+feat(doors): bundle three original games in 00.04.00
 
-Await WebSocket plugin registration before declaring application/static routes.
-Keep HTTP 426 diagnostics, authentication, and message formats unchanged.
-Require terminal prompt, blank-handle round-trip, and clean close in CI.
-Add nine probe tests plus a startup-order regression assertion.
-Include LICENSE in the image and synchronize release metadata/documentation.
-Preserve dependency audit gates, existing tags, credentials, volumes, and schema.
-Fixes failed GHCR run 36357562249 at baseline 57eaba2043291ae6874fa35a83db336d390607d4.
+Add World Conquest, Lantern Hollow, and Modem Mogul as enabled native doors.
+Persist individual and shared state with serializable PostgreSQL transactions.
+Validate account access, door enablement, input, quantities, and save versions.
+Add live combat, timer cleanup, scores, bounded retries, and daily simulation turns.
+Add gameplay, concurrency, regression, performance, and rollback tests.
+Document all commands, deployment, schema changes, limits, and rollback.
+Preserve existing APIs, sample doors, environment names, and dependency ranges.
 ```
+
+Baseline: `7739893538c0ff0101aac52197224b69fa2a2dbd`. No issue number was supplied.
+Prior notes are preserved in the repository's `RELEASE-NOTES-00.03.03.md`.

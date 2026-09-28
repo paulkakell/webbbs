@@ -83,6 +83,8 @@ jobs:
           docker compose --env-file /dev/null -f docker-compose.ghcr.yml up -d --no-build --pull never
       - name: Test startup, authentication, authorization, database, and WebSockets
         run: docker compose --env-file /dev/null -f docker-compose.ghcr.yml exec -T webbbs_app node scripts/smoke-container.mjs
+      - name: Test bundled doors and save-preserving rollback
+        run: docker compose --env-file /dev/null -f docker-compose.ghcr.yml exec -T -e WEBBBS_DOOR_INTEGRATION=1 webbbs_app node scripts/smoke-doors.mjs
       - name: Publish version and commit tags, then verify remote digest
         id: publish
         env:

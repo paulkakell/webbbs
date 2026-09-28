@@ -1,0 +1,14 @@
+feat(doors): bundle three original games in 00.04.00
+
+Add World Conquest, Lantern Hollow, and Modem Mogul as enabled native doors.
+Persist individual and shared state with serializable PostgreSQL transactions.
+Validate account access, door enablement, input, quantities, and save versions.
+Add live combat, timer cleanup, scores, bounded retries, and daily simulation turns.
+Add gameplay, concurrency, regression, performance, and rollback tests.
+Document every command, deployment, schema changes, limitations, and rollback.
+Preserve existing APIs, sample doors, environment names, and dependency ranges.
+
+Classification: additive feature release with an additive DoorSave table.
+Downgrade requires the documented save-table archival procedure.
+Baseline: 7739893538c0ff0101aac52197224b69fa2a2dbd.
+No issue number supplied.
