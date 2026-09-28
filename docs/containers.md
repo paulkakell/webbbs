@@ -10,6 +10,7 @@ permalink: /containers/
 The image is `ghcr.io/paulkakell/webbbs`. Initial published platform: `linux/amd64`.
 ARM-native images are not published by this workflow. Use the source-build
 Compose file on other platforms and validate your build there.
+Confirm the release's GHCR workflow succeeded before using its image reference.
 
 ## New installation without source code
 
@@ -17,8 +18,8 @@ Download these two files into a new directory. This does not require Git or a Do
 
 ```sh
 mkdir webbbs && cd webbbs
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.02/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.02/.env.ghcr.example -o .env
+curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.03/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
+curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.03/.env.ghcr.example -o .env
 chmod 600 .env
 openssl rand -hex 24
 openssl rand -hex 24
@@ -65,7 +66,7 @@ The publishing workflow uses its short-lived `GITHUB_TOKEN` with
 
 | Variable | Default / example | Purpose |
 | --- | --- | --- |
-| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.03.02` | Fixed release; use an `@sha256:...` reference from the workflow summary for exact bytes. |
+| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.03.03` | Fixed release; use an `@sha256:...` reference from the workflow summary for exact bytes. |
 | `POSTGRES_PASSWORD` | Required | Existing database password or a new hex password; username/database remain `bbs`. |
 | `SYSOP_PASSWORD` | Required | Bootstrap administrator password; changing it is not a guaranteed existing-account password reset. |
 | `SYSOP_HANDLE` | `sysop` | Bootstrap account name, for example `paul`. |
@@ -76,7 +77,7 @@ The publishing workflow uses its short-lived `GITHUB_TOKEN` with
 | `SESSION_TTL_DAYS` | `7` | Web session lifetime; for example `1` for shorter sessions. |
 | `ALLOW_REGISTRATION` | `true` | Bootstrap setting; set `false` for closed registration and review persisted settings in Admin. |
 
-The image is published with padded release tags (`00.03.02`), full commit tags
+The image is published with padded release tags (`00.03.03`), full commit tags
 (`sha-<40-character-commit>`), and a moving `latest` alias. Prefer version or
 digest references for production. Reusing a version from another commit is
 rejected when the existing registry manifest can be read. Digest references,
@@ -96,11 +97,32 @@ are retained. The original `docker-compose.yml` remains the source-build option.
 For subsequent image upgrades, record the old digest, change `WEBBBS_IMAGE`,
 then run `pull` and `up -d`. Roll back by restoring the recorded digest and
 running the same commands. Never use `down -v` on production data.
-Release 00.03.02 does not alter the schema, but startup still runs Prisma
+Release 00.03.03 does not alter the schema, but startup still runs Prisma
 `db push`. Image rollback alone is not a database rollback for future schema changes.
 Before the first GHCR release, rollback means using the `v00.02.00` source
 release with its original Compose file and the preserved data, not a nonexistent
-older GHCR tag.
+older GHCR tag. Older sources have known limitations; see the release notes
+before reverting the WebSocket or dependency fixes.
+
+## WebSocket startup fix and diagnostics
+
+Version `00.03.03` awaits WebSocket plugin registration before declaring routes.
+The failed `00.03.02` integration run used a direct loopback connection, so that
+failure was not caused by a reverse proxy. Update the image reference in `.env`
+to `ghcr.io/paulkakell/webbbs:00.03.03` and recreate the app after the new image
+is published, preserving credentials and volumes. Source installations instead
+update the checkout and run `docker compose up -d --build`.
+
+A plain HTTP diagnostic remains available:
+
+```sh
+curl -i http://localhost:3000/ws/bbs
+```
+
+Expected result: `426 Upgrade Required`. Open `/bbs` in a browser to establish
+a real WebSocket connection; its network panel should show `101` and the
+terminal should reach the `Handle:` prompt. Reverse proxies must still forward
+`Upgrade` and `Connection` headers as described in the README.
 
 ## Publication and checks
 
@@ -110,17 +132,35 @@ The workflow runs the complete checked-in tests, syntax/configuration checks,
 a fresh Node 22 image build, and a blocking audit of all shipped npm dependencies.
 It starts a disposable PostgreSQL stack and checks login validation, session
 revocation, admin authorization, database writes, and WebSocket upgrades.
+The WebSocket check now requires the login prompt, a blank-handle request/reply,
+and clean closure. Its timeout and output buffer are bounded, and unit tests
+reject connections that only complete a handshake without working terminal I/O.
 A 20-request timing check is diagnostic, not a production capacity benchmark.
 The tested image is pushed, pulled back, and its digest recorded in the summary.
 The Pages/source-release and CodeQL workflows continue independently; a source
 release does not by itself prove that container publication succeeded.
 
-The static-file and UUID dependencies were updated for security fixes. There is still no committed
+Run the regression suite without a database using `npm test`. On an isolated,
+fresh test stack only, reproduce the integration check with:
+
+```sh
+docker compose -f docker-compose.ghcr.yml exec -T webbbs_app node scripts/smoke-container.mjs
+```
+
+Do not run that script against production: it uses administrator credentials
+from the container environment and creates/deletes a disposable test board.
+The internal `checkWebSocket` helper defaults to a 10,000 ms deadline; tests may
+pass `timeoutMs` to shorten failure cases and `WebSocketImpl` to substitute a
+fake socket. These are test options, not new deployment environment variables.
+
+The static-file and UUID dependencies were updated for security fixes in
+`00.03.01`; `00.03.03` does not change dependency ranges. There is still no committed
 npm lockfile. Rebuilding source is not guaranteed to recreate an earlier image;
 preserve published digests. OS-package scanning and full production load testing
 are not provided by the npm audit. The image retains the existing root-user
 runtime and toolchain; this release is not a complete hardening certification.
 
-Releases `00.03.00` and `00.03.01` were source-only: dependency findings blocked
-the first, and a malformed request in the new integration test blocked the
-second. Use `00.03.02`; neither earlier version is an available GHCR tag.
+Releases `00.03.00` through `00.03.02` did not publish images in their original
+runs: dependency findings blocked the first, a malformed integration request
+blocked the second, and WebSocket startup ordering blocked the third. The
+`00.03.03` reference is usable only after its GHCR workflow verifies publication.

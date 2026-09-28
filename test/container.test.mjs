@@ -45,7 +45,7 @@ test('the container uses Node 22 and excludes common private material', () => {
 });
 test('integration checks cover sessions, database writes, and WebSocket upgrade', () => {
   const smoke = read('scripts/smoke-container.mjs');
-  for (const text of ['401', '400', 'HttpOnly', '/api/admin/boards', '/api/auth/logout', 'new WebSocket'])
+  for (const text of ['401', '400', 'HttpOnly', '/api/admin/boards', '/api/auth/logout', 'checkWebSocket'])
     assert.ok(smoke.includes(text));
 });
 
@@ -64,4 +64,16 @@ test('smoke requests reserve JSON content type for requests carrying JSON', () =
   assert.ok(sharedHeaders, 'Shared session headers exist');
   assert.doesNotMatch(sharedHeaders[1], /content-type/);
   assert.ok(smoke.includes("method: 'POST', headers: { ...headers, 'content-type': 'application/json' }"));
+});
+
+test('WebSocket registration finishes before direct routes and static route registration', () => {
+  const server = read('src/server.mjs');
+  const registration = server.indexOf('await fastify.register(websocket);');
+  const firstRoute = server.search(/fastify\.(?:get|post|put|delete|patch|route)\s*\(/);
+  assert.ok(registration >= 0, 'WebSocket plugin registration must be awaited');
+  assert.ok(firstRoute > registration, 'Upgrade hooks must precede direct routes');
+  assert.ok(server.indexOf('fastify.register(staticPlugin') > registration);
+  assert.ok(read('scripts/smoke-container.mjs').includes("request('/ws/bbs')).status, 426"));
+  assert.ok(read('scripts/smoke-container.mjs').includes("await checkWebSocket('ws://127.0.0.1:3000/ws/bbs')"));
+  assert.ok(read('Dockerfile').includes('COPY package.json LICENSE ./'));
 });

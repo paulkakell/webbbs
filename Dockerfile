@@ -12,7 +12,7 @@ RUN apt-get update \
      ca-certificates openssl python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-COPY package.json ./
+COPY package.json LICENSE ./
 COPY prisma ./prisma
 COPY scripts ./scripts
 

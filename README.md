@@ -1,6 +1,6 @@
 # webBBS
 
-## Version 00.03.02
+## Version 00.03.03
 
 A Dockerized, web-served recreation of a classic early-90s BBS experience.
 
@@ -36,8 +36,9 @@ Key goals:
 
 ## Quick start: prebuilt GHCR image
 
-Use `ghcr.io/paulkakell/webbbs:00.03.02` on Linux amd64. Download
-`docker-compose.ghcr.yml` and `.env.ghcr.example` from this release, then:
+Use `ghcr.io/paulkakell/webbbs:00.03.03` on Linux amd64 after the release's
+GHCR workflow has completed successfully. Download `docker-compose.ghcr.yml`
+and `.env.ghcr.example` from this release, then:
 
 ```sh
 cp .env.ghcr.example .env
@@ -95,6 +96,12 @@ proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection "Upgrade";
 ```
 
+Release `00.03.03` fixes a separate server startup-order bug: the WebSocket
+plugin is now awaited before routes are declared. The `00.03.02` integration
+run failed on a direct connection with no reverse proxy. Rebuild or update the
+application to apply this fix; changing proxy headers alone cannot fix that bug.
+A plain HTTP request to `/ws/bbs` still intentionally returns `426`.
+
 ## Local dev (without Docker)
 
 Requires Node 22+ and Postgres.
@@ -147,6 +154,11 @@ The GHCR workflow runs these repository tests and syntax checks, builds a fresh
 image, audits all shipped npm dependencies, and tests a disposable PostgreSQL
 stack before publication. Authentication, authorization, database writes,
 session revocation, and WebSocket upgrades are covered by the smoke check.
+The WebSocket probe requires the login prompt, a blank-handle round-trip, and
+normal connection closure; a handshake alone is insufficient. Its dependency-free
+unit tests cover handshake failures, missing output/replies, malformed frames,
+output limits, and timeouts. Run the full integration script only against a
+disposable stack because its other checks create and delete a test board.
 Its summary records the verified digest; npm audit is not an OS-package scan.
 Dependency ranges remain unlocked, so use published digests rather than assuming
 source rebuilds produce identical images.

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { performance } from 'node:perf_hooks';
+import { checkWebSocket } from './check-websocket.mjs';
 
 // Use only against the disposable CI stack, never a production database.
 const request = (path, options = {}) => fetch(`http://127.0.0.1:3000${path}`, {
@@ -50,12 +51,8 @@ try {
     method: 'DELETE', headers
   })).status, 200);
 }
-await new Promise((resolve, reject) => {
-  const socket = new WebSocket('ws://127.0.0.1:3000/ws/bbs');
-  const timer = setTimeout(() => { socket.close(); reject(new Error('WebSocket timeout')); }, 10000);
-  socket.addEventListener('open', () => { clearTimeout(timer); socket.close(); resolve(); }, { once: true });
-  socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('WebSocket failed')); }, { once: true });
-});
+assert.equal((await request('/ws/bbs')).status, 426, 'Plain HTTP keeps its upgrade diagnostic');
+console.log(JSON.stringify(await checkWebSocket('ws://127.0.0.1:3000/ws/bbs')));
 assert.equal((await request('/api/auth/logout', { method: 'POST', headers })).status, 200);
 assert.equal((await request('/api/admin/config', { headers })).status, 401, 'Revoked session denied');
 const started = performance.now();

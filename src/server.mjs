@@ -126,7 +126,8 @@ fastify.register(multipart, {
     fileSize: 1024 * 1024 * 100 // 100MB
   }
 });
-fastify.register(websocket);
+// Install upgrade hooks before declaring any application routes.
+await fastify.register(websocket);
 
 fastify.register(staticPlugin, {
   root: path.join(ROOT, 'public'),

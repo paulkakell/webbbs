@@ -1,5 +1,22 @@
 # Changelog
 
+## 00.03.03 (2026-09-27)
+
+Fix
+- Await `@fastify/websocket` registration before declaring application or static routes, so the plugin's route hooks install the WebSocket handler for `/ws/bbs` instead of leaving direct upgrade requests without a working handler.
+- Keep plain HTTP `/ws/bbs` responses at `426` and preserve the existing WebSocket protocol, synchronous event attachment, authentication, and authorization logic.
+- Include the existing repository LICENSE in the distributed image.
+
+Additive
+- Add a bounded WebSocket probe requiring the anonymous login prompt, a blank-handle request/reply, and normal connection closure. A handshake or clear-screen frame alone cannot pass.
+- Add nine dependency-free probe tests and a registration-order regression assertion; retain all existing integration and blocking dependency-audit checks.
+- Synchronize version, Compose, environment template, README, documentation, changelog, and release notes at `00.03.03` / `0.3.3`.
+
+Traceability and compatibility
+- Fixes the failure in GHCR run `36357562249`, publish job `108728234624`, at baseline commit `57eaba2043291ae6874fa35a83db336d390607d4` (`00.03.02`). No issue number supplied.
+- Classification: backward-compatible runtime fix and additive tests/documentation. No dependency-range, API, CLI, environment-name, database-schema, or production-data changes relative to `00.03.02`; no database migration or rollback script is needed.
+- The prior `00.03.00` through `00.03.02` source releases did not publish images in their original runs. Existing tags are not moved. Consult the new release commit's Actions results for publication status and digest.
+
 ## 00.03.02 (2026-09-27)
 
 Fix
