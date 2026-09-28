@@ -1,0 +1,7 @@
+{
+  "doorId": "world-conquest",
+  "name": "World Conquest",
+  "description": "Territory strategy: multiplayer or CPU.",
+  "type": "INTERNAL",
+  "enabled": true
+}

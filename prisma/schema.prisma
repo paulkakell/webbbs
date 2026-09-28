@@ -47,7 +47,7 @@ model WebSession {
 
 model BbsConfig {
   id                     Int      @id
-  bbsName                String
+  bbsName                 String
   motd                   String
   allowRegistration      Boolean
   minUploadDownloadRatio Float
@@ -131,4 +131,16 @@ model DoorPackage {
   type        DoorType @default(INTERNAL)
   enabled     Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+// Additive game storage. Existing tables and relations are unchanged.
+model DoorSave {
+  doorId    String
+  scope     String
+  data      Json
+  score     Int      @default(0)
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@id([doorId, scope])
+  @@index([doorId, score])
 }

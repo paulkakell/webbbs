@@ -15,6 +15,7 @@ RUN apt-get update \
 COPY package.json LICENSE ./
 COPY prisma ./prisma
 COPY scripts ./scripts
+COPY ops ./ops
 
 # Audit the resolved dependencies in CI before publishing the image.
 RUN npm set fund false \

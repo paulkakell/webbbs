@@ -1,166 +1,117 @@
 ---
-title: Container registry installation
+title: Container installation
 permalink: /containers/
 ---
 
-# Install from GHCR
+# Container installation
 
-[Home]({{ '/' | relative_url }}) · [Release notes]({{ '/release-notes/' | relative_url }})
+[Home]({{ '/' | relative_url }}) | [Games]({{ '/bundled-doors/' | relative_url }}) | [Release and rollback]({{ '/release-notes/' | relative_url }})
 
-The image is `ghcr.io/paulkakell/webbbs`. Initial published platform: `linux/amd64`.
-ARM-native images are not published by this workflow. Use the source-build
-Compose file on other platforms and validate your build there.
-Confirm the release's GHCR workflow succeeded before using its image reference.
+## Install the prebuilt image
 
-## New installation without source code
+The current source release is 00.04.00. Use the image only after its GHCR workflow
+succeeds. The supported published platform remains Linux amd64. A successful
+source release or Pages deployment is not proof that an image was published.
 
-Download these two files into a new directory. This does not require Git or a Dockerfile:
+Download `docker-compose.ghcr.yml` and `.env.ghcr.example` from the matching GitHub
+release or tagged source tree. The standalone file does not require a Dockerfile:
 
 ```sh
-mkdir webbbs && cd webbbs
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.03/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
-curl -fL https://raw.githubusercontent.com/paulkakell/webbbs/v00.03.03/.env.ghcr.example -o .env
+cp .env.ghcr.example .env
 chmod 600 .env
 openssl rand -hex 24
 openssl rand -hex 24
-```
-
-Edit `.env`: use the two generated values for `POSTGRES_PASSWORD` and
-`SYSOP_PASSWORD`, respectively. Empty passwords deliberately stop Compose.
-Use hexadecimal database passwords because the same value is interpolated into
-a PostgreSQL URL. Do not put secrets in Git, image build arguments, or logs.
-
-```sh
+# Put two DIFFERENT generated values into POSTGRES_PASSWORD and SYSOP_PASSWORD.
 docker compose -f docker-compose.ghcr.yml config --quiet
 docker compose -f docker-compose.ghcr.yml pull
 docker compose -f docker-compose.ghcr.yml up -d
-docker compose -f docker-compose.ghcr.yml logs -f webbbs_app
 ```
 
-Open `http://localhost:3000/bbs` or `http://localhost:3000/admin` after startup.
-The database has no published host port. The app binds to loopback by default.
-For access from another machine, set `BIND_ADDRESS=0.0.0.0` and apply firewall,
-HTTPS, and WebSocket reverse-proxy configuration before internet exposure.
-An external reverse-proxy container also needs a reachable address or shared network.
+Open `http://localhost:3000/bbs` for the terminal and `/admin` for administration.
+New installations use handle `sysop` unless configured otherwise. Existing user
+credentials are not reset by editing bootstrap environment settings.
 
-## Package visibility and authentication
+## Settings and examples
 
-GitHub defaults new GHCR packages to private, even when source code is public.
-For anonymous installation, open the account's `webbbs` package, choose
-**Package settings**, and set **Change visibility** to **Public**. Public
-visibility is separate from repository permissions and is not changed by CI.
-
-To pull a private package, authenticate locally with a classic personal access
-token having `read:packages`. Enter it at Docker's password prompt; do not put it
-in Compose or send it to another person:
-
-```sh
-docker login ghcr.io -u YOUR_GITHUB_USERNAME
-```
-
-The publishing workflow uses its short-lived `GITHUB_TOKEN` with
-`packages: write`, not a stored personal token. See GitHub's
-[Container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
-
-## Configuration and examples
-
-| Variable | Default / example | Purpose |
+| Variable | Default or requirement | Example/use |
 | --- | --- | --- |
-| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.03.03` | Fixed release; use an `@sha256:...` reference from the workflow summary for exact bytes. |
-| `POSTGRES_PASSWORD` | Required | Existing database password or a new hex password; username/database remain `bbs`. |
-| `SYSOP_PASSWORD` | Required | Bootstrap administrator password; changing it is not a guaranteed existing-account password reset. |
-| `SYSOP_HANDLE` | `sysop` | Bootstrap account name, for example `paul`. |
-| `BIND_ADDRESS` | `127.0.0.1` | Local-only; `0.0.0.0` exposes the port on all host interfaces. |
-| `PORT` | `3000` | Host port, for example `8080`; container port stays 3000. |
-| `DB_VOLUME` | `./.data/postgres` | Persistent PostgreSQL data; for example `/srv/webbbs/postgres`. |
-| `APP_VOLUME` | `./.data/files` | Persistent uploads; for example `/srv/webbbs/files`. |
-| `SESSION_TTL_DAYS` | `7` | Web session lifetime; for example `1` for shorter sessions. |
-| `ALLOW_REGISTRATION` | `true` | Bootstrap setting; set `false` for closed registration and review persisted settings in Admin. |
+| `WEBBBS_IMAGE` | `ghcr.io/paulkakell/webbbs:00.04.00` | Pin the verified digest for repeatable deployment or rollback. |
+| `POSTGRES_PASSWORD` | Required, no fallback | Set before first startup; retain an existing database's password on upgrades. |
+| `SYSOP_HANDLE` | `sysop` | Set `SYSOP_HANDLE=operator` before first bootstrap for a different handle. |
+| `SYSOP_PASSWORD` | Required, no fallback | Use a separate strong password, not the database password. |
+| `PORT` | Host port `3000` | `PORT=3001` publishes host 3001; the app still listens on container port 3000. |
+| `BIND_ADDRESS` | `127.0.0.1` | `0.0.0.0` exposes the host port to other machines; add firewall and HTTPS protection. |
+| `DB_VOLUME` | `./.data/postgres` | Point to the EXISTING PostgreSQL directory, such as `/dockershare/containers/webbbs/db`. |
+| `APP_VOLUME` | `./.data/files` | Point to the existing file directory, such as `/dockershare/containers/webbbs/app`. |
+| `SESSION_TTL_DAYS` | `7` | Set `1` for shorter newly created web sessions. |
+| `ALLOW_REGISTRATION` | `true` | `false` controls initial bootstrap; use Admin for existing stored configuration. |
 
-The image is published with padded release tags (`00.03.03`), full commit tags
-(`sha-<40-character-commit>`), and a moving `latest` alias. Prefer version or
-digest references for production. Reusing a version from another commit is
-rejected when the existing registry manifest can be read. Digest references,
-not tags, provide registry-enforced content identity.
+The standalone Compose file sets `DATABASE_URL` internally using the database
+service and credentials, `DATA_DIR=/data`, and container `PORT=3000`. There are no
+new door-specific environment variables. Disable or enable games through the
+existing Admin Doors controls. Saved progress lives in PostgreSQL, not APP_VOLUME.
 
-## Existing installation and rollback
+Generated hexadecimal passwords avoid connection-URL escaping pitfalls. When
+using other characters in the database password, the password inside a manually
+constructed DATABASE_URL must be URL-encoded; shell or YAML quoting alone does
+not perform URL encoding. Never publish `.env`, rendered secret-bearing Compose
+configuration, database backups, or registry credentials. Use `config --quiet`
+when checking configuration in shared logs.
 
-Do not replace an existing `.env` blindly. Keep the same absolute `DB_VOLUME`
-and `APP_VOLUME` paths, database password, sysop account, and Compose project
-name. For the original unmodified Compose database, the existing password is
-`bbs`; changing an environment variable does not rotate an initialized database's
-password. Rotate it separately before exposing the service. Back up PostgreSQL
-and uploads before switching. Stop the old stack without deleting data, then
-start the GHCR file from the same project directory. Service/container names
-are retained. The original `docker-compose.yml` remains the source-build option.
+## Existing installations
 
-For subsequent image upgrades, record the old digest, change `WEBBBS_IMAGE`,
-then run `pull` and `up -d`. Roll back by restoring the recorded digest and
-running the same commands. Never use `down -v` on production data.
-Release 00.03.03 does not alter the schema, but startup still runs Prisma
-`db push`. Image rollback alone is not a database rollback for future schema changes.
-Before the first GHCR release, rollback means using the `v00.02.00` source
-release with its original Compose file and the preserved data, not a nonexistent
-older GHCR tag. Older sources have known limitations; see the release notes
-before reverting the WebSocket or dependency fixes.
+Back up PostgreSQL, preserve volume paths, and record the running image ID/digest.
+Do not replace existing credentials, host ports, or custom Docker network settings
+with example defaults. Editing `POSTGRES_PASSWORD` does not update the credentials
+inside an already initialized database. A changed bind path can look like a new,
+empty installation even when the original data remains elsewhere.
 
-## WebSocket startup fix and diagnostics
+Change the image reference in your current Compose/environment configuration and
+recreate the application after the new release is published. The three new doors
+are scanned and installed automatically. Rescans preserve disabled settings.
+Read the [release notes]({{ '/release-notes/' | relative_url }}) before upgrading:
+00.04.00 adds DoorSave, and downgrading requires its documented archival step.
+Do not delete volumes or add a data-loss override to work around a schema warning.
 
-Version `00.03.03` awaits WebSocket plugin registration before declaring routes.
-The failed `00.03.02` integration run used a direct loopback connection, so that
-failure was not caused by a reverse proxy. Update the image reference in `.env`
-to `ghcr.io/paulkakell/webbbs:00.03.03` and recreate the app after the new image
-is published, preserving credentials and volumes. Source installations instead
-update the checkout and run `docker compose up -d --build`.
+## Registry access
 
-A plain HTTP diagnostic remains available:
+GHCR package visibility is separate from publication. For a private package,
+authorized users must log in with a token that has `read:packages` and any required
+organization authorization. Avoid putting tokens in command arguments or files:
 
 ```sh
-curl -i http://localhost:3000/ws/bbs
+# Read a token securely using your shell's normal secret-entry mechanism.
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
+unset GHCR_TOKEN
 ```
 
-Expected result: `426 Upgrade Required`. Open `/bbs` in a browser to establish
-a real WebSocket connection; its network panel should show `101` and the
-terminal should reach the `Handle:` prompt. Reverse proxies must still forward
-`Upgrade` and `Connection` headers as described in the README.
+Owners can make the package public for anonymous pulls. Verify the version tag and
+revision label against the release commit. Retain the previously running local
+image or save it with `docker image save` before upgrading; source tags alone are
+not usable image backups.
 
-## Publication and checks
+## Source builds and reverse proxies
 
-Push a versioned change to `main`, or run **Publish GHCR container** manually
-on `main`. Pull requests run validation only and never log in or push images.
-The workflow runs the complete checked-in tests, syntax/configuration checks,
-a fresh Node 22 image build, and a blocking audit of all shipped npm dependencies.
-It starts a disposable PostgreSQL stack and checks login validation, session
-revocation, admin authorization, database writes, and WebSocket upgrades.
-The WebSocket check now requires the login prompt, a blank-handle request/reply,
-and clean closure. Its timeout and output buffer are bounded, and unit tests
-reject connections that only complete a handshake without working terminal I/O.
-A 20-request timing check is diagnostic, not a production capacity benchmark.
-The tested image is pushed, pulled back, and its digest recorded in the summary.
-The Pages/source-release and CodeQL workflows continue independently; a source
-release does not by itself prove that container publication succeeded.
+`docker-compose.yml` still uses `build: .`. Clone the full repository before
+running that file. A Compose-only download cannot build without a Dockerfile.
+See the repository README for source setup. Source builds use unlocked dependency
+ranges; a verified image digest is a stronger deployment reference.
 
-Run the regression suite without a database using `npm test`. On an isolated,
-fresh test stack only, reproduce the integration check with:
+The BBS terminal requires a WebSocket upgrade at `/ws/bbs`. Successful upgrades
+return HTTP 101; plain HTTP requests intentionally return 426. Forward the Upgrade
+and Connection headers and use HTTP/1.1 for the upstream. The application retains
+the 00.03.03 startup-order fix. Use HTTPS/WSS and appropriate network restrictions
+when making the BBS publicly accessible.
+
+## Validation and troubleshooting
 
 ```sh
-docker compose -f docker-compose.ghcr.yml exec -T webbbs_app node scripts/smoke-container.mjs
+docker compose -f docker-compose.ghcr.yml ps
+docker compose -f docker-compose.ghcr.yml logs --tail 100 webbbs_app
 ```
 
-Do not run that script against production: it uses administrator credentials
-from the container environment and creates/deletes a disposable test board.
-The internal `checkWebSocket` helper defaults to a 10,000 ms deadline; tests may
-pass `timeoutMs` to shorten failure cases and `WebSocketImpl` to substitute a
-fake socket. These are test options, not new deployment environment variables.
-
-The static-file and UUID dependencies were updated for security fixes in
-`00.03.01`; `00.03.03` does not change dependency ranges. There is still no committed
-npm lockfile. Rebuilding source is not guaranteed to recreate an earlier image;
-preserve published digests. OS-package scanning and full production load testing
-are not provided by the npm audit. The image retains the existing root-user
-runtime and toolchain; this release is not a complete hardening certification.
-
-Releases `00.03.00` through `00.03.02` did not publish images in their original
-runs: dependency findings blocked the first, a malformed integration request
-blocked the second, and WebSocket startup ordering blocked the third. The
-`00.03.03` reference is usable only after its GHCR workflow verifies publication.
+Review logs privately; do not share credentials. Missing-image errors require
+checking release publication and package visibility. Startup database errors
+require checking service readiness, existing credentials, and preserved volumes.
+A successful source release does not override a failed blocking dependency audit.
+Do not run the destructive integration scripts against a production BBS.

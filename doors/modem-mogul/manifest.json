@@ -1,0 +1,7 @@
+{
+  "doorId": "modem-mogul",
+  "name": "Modem Mogul",
+  "description": "Build and manage your own virtual BBS.",
+  "type": "INTERNAL",
+  "enabled": true
+}

@@ -1,0 +1,62 @@
+name: Bundled door integration
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  doors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bbs
+          POSTGRES_PASSWORD: disposable-ci-only
+          POSTGRES_DB: bbs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bbs -d bbs"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      DATABASE_URL: postgresql://bbs:disposable-ci-only@127.0.0.1:5432/bbs?schema=public
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm test
+      - run: npm run check
+      - name: Build a clean versioned image
+        run: |
+          set -eu
+          image="webbbs:$(cat VERSION)-sha-$GITHUB_SHA"
+          echo "DOOR_TEST_IMAGE=$image" >> "$GITHUB_ENV"
+          docker build --pull --no-cache --label "org.opencontainers.image.version=$(cat VERSION)" --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$image" .
+      - name: Audit shipped dependencies
+        run: docker run --rm --entrypoint npm "$DOOR_TEST_IMAGE" audit --audit-level=low
+      - name: Start disposable application
+        run: |
+          set -eu
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          docker run -d --name webbbs_doors_ci --network host -e DATABASE_URL -e "SYSOP_PASSWORD=$password" -e PORT=3000 "$DOOR_TEST_IMAGE"
+      - name: Existing authentication and WebSocket integration
+        run: docker exec webbbs_doors_ci node scripts/smoke-container.mjs
+      - name: Door persistence, concurrency, and rollback integration
+        run: docker exec -e WEBBBS_DOOR_INTEGRATION=1 webbbs_doors_ci node scripts/smoke-doors.mjs
+      - name: Application logs on failure
+        if: failure()
+        run: docker logs --tail 100 webbbs_doors_ci || true
+      - name: Cleanup
+        if: always()
+        run: docker rm -f webbbs_doors_ci || true

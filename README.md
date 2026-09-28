@@ -1,71 +1,79 @@
 # webBBS
 
-## Version 00.03.03
+## Version 00.04.00
 
-A Dockerized, web-served recreation of a classic early-90s BBS experience.
+A Dockerized, web-served recreation of an early-90s BBS. The browser ANSI terminal
+uses xterm.js and WebSockets to connect to a server-side BBS state machine.
 
-The primary UI is a browser-based ANSI terminal (xterm.js) connected to a server-side BBS state machine over WebSockets.
+## Features
 
-Key goals:
-- “Feels like a BBS”: menus, prompts, ANSI, single-key navigation.
-- Fully functional site (not a mock): users, message boards, file areas with ratio/leech enforcement, and modular doors.
-- All configuration is stored in the database and can be managed either:
-  - inside the BBS (Sysop menu), or
-  - via a web Admin UI.
+- BBS terminal at `/bbs`, sysop and user accounts, and administration at `/admin`.
+- Message boards, threads, posts, and user profiles.
+- Browser uploads/downloads initiated from the terminal, with upload/download
+  statistics, configurable ratio enforcement, and freeleech areas/files.
+- Internal JavaScript door plugins and administration controls.
+- Three original games bundled and enabled on first discovery:
+  **World Conquest**, **Lantern Hollow**, and **Modem Mogul**.
+- The existing Guess The Number and ANSI Clock packages are retained.
 
-## Features (included)
+World Conquest offers a 12-territory shared match for 2-4 players and separate
+saved CPU campaigns. Lantern Hollow offers nine shared fantasy rooms, live
+combat, chat, equipment, and a quest. Modem Mogul lets each caller run a fictional
+BBS business, with equipment, employees, daily events, and a leaderboard.
 
-- Web terminal BBS client (`/bbs`)
-- Sysop + user accounts
-- Message boards
-  - boards, threads, posts
-  - simple new-thread and reply workflows
-- File areas
-  - upload/download through browser while controlled from inside the BBS
-  - per-user upload/download stats
-  - ratio/leech enforcement (configurable)
-  - optional “freeleech” areas/files
-- Doors
-  - internal door plugin loader (from `./doors/*`)
-  - sample door: Guess The Number
-- Web Admin UI (`/admin`)
-  - login
-  - edit BBS config
-  - manage boards, file areas
-  - install/enable doors
+These are original native games inspired by the requested territory-strategy,
+MUD, and sysop-simulation categories. They are not copies of Global War, DoorMUD,
+or Virtual Sysop III, and do not contain their binaries, maps, text, or assets.
 
 ## Quick start: prebuilt GHCR image
 
-Use `ghcr.io/paulkakell/webbbs:00.03.03` on Linux amd64 after the release's
-GHCR workflow has completed successfully. Download `docker-compose.ghcr.yml`
-and `.env.ghcr.example` from this release, then:
+Use `ghcr.io/paulkakell/webbbs:00.04.00` on Linux amd64 only after that release's
+GHCR workflow succeeds. A source tag alone does not establish image availability.
+Download `docker-compose.ghcr.yml` and `.env.ghcr.example` from the same release:
 
 ```sh
 cp .env.ghcr.example .env
 chmod 600 .env
-# Generate two separate passwords, then enter them in .env.
+# Generate separate passwords, then enter them in .env.
 openssl rand -hex 24
 openssl rand -hex 24
-# Edit POSTGRES_PASSWORD and SYSOP_PASSWORD before continuing.
+# Set POSTGRES_PASSWORD and SYSOP_PASSWORD before starting.
 docker compose -f docker-compose.ghcr.yml pull
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-No Git checkout, Dockerfile, or local build is needed. New GHCR packages default
-to private; the owner must make the package public for anonymous pulls, or users
-must run `docker login ghcr.io` with a classic token having `read:packages`.
-The [container guide](docs/containers.md) includes download commands, all settings,
-existing-installation migration, authentication, and rollback.
+Open `http://localhost:3000/bbs` or `http://localhost:3000/admin`.
+The initial handle is `sysop` unless `SYSOP_HANDLE` is changed. Bootstrap settings
+are not a password-reset mechanism for existing accounts.
 
-Open `http://localhost:3000/bbs` or `http://localhost:3000/admin` after startup.
-The new Compose file binds to loopback by default. Set `BIND_ADDRESS=0.0.0.0`
-for access from other machines, with appropriate firewall and HTTPS protection.
-Keep existing volume paths and credentials when switching an existing install.
+New deployments bind to loopback. For access from other machines, configure
+`BIND_ADDRESS`, a firewall, and an HTTPS reverse proxy. Keep existing credentials,
+ports, network settings, and volume paths when upgrading an existing installation.
+GHCR package visibility is independent of publication: private packages require
+authorized registry login. See the [container guide](docs/containers.md).
 
-## Alternative: build from source
+## Play the bundled doors
 
-The original `docker-compose.yml` still uses `build: .` and requires the complete
-repository, not just the Compose file:
+Log in, open **Doors**, and choose a game by its displayed number. Type `HELP`
+inside any game. Every accepted action saves automatically to PostgreSQL; `Q`
+returns to the door menu. Examples:
+
+```text
+World Conquest: SOLO -> REINFORCE 1 3 -> ATTACK 1 2 -> END
+Lantern Hollow: NORTH -> ATTACK -> STOP -> SOUTH -> REST
+Modem Mogul: NAME Copper Line -> BUY MODEM -> NEXT -> STATUS
+```
+
+The [game guide](docs/bundled-doors.md) documents every command, examples, limits,
+multiplayer behavior, save formats, and administration. The normal startup scan
+installs the packages. An existing disabled setting stays disabled on rescans.
+No external game server, emulator, additional account, API key, or new environment
+variable is needed. Command text is limited to printable ASCII in these games.
+
+## Build from source
+
+The original `docker-compose.yml` uses `build: .` and therefore requires the
+complete repository, including its Dockerfile:
 
 ```sh
 git clone https://github.com/paulkakell/webbbs.git
@@ -73,22 +81,28 @@ cd webbbs
 cp .env.example .env
 mkdir -p .data/postgres .data/files
 printf '\nDB_VOLUME=%s/.data/postgres\nAPP_VOLUME=%s/.data/files\n' "$PWD" "$PWD" >> .env
-# Edit .env and set a unique SYSOP_PASSWORD before starting.
+# Set unique credentials in .env before starting.
 docker compose up --build -d
 ```
 
-The original database credentials are for local setup, not internet-facing
-production. The server waits for Postgres, applies the Prisma schema with
-`db push`, bootstraps the sysop account, and ensures default configuration.
-Back up persistent data before upgrading.
+For local development, install Node 22 and PostgreSQL, configure `.env`, then run
+`npm install`, `npm run prisma:generate`, `npm run db:push`, `npm run bootstrap`,
+`npm run vendor`, and `npm run dev`.
 
-## Reverse proxy notes (WebSockets)
+## Database upgrade and rollback
 
-The BBS terminal requires WebSockets (`/ws/bbs`). A successful handshake returns HTTP `101 Switching Protocols`.
+Back up the database and retain the current image before upgrading. Startup
+continues to use Prisma `db push`; this release adds only the `DoorSave` table.
+Existing account, message, transfer, and configuration schemas remain unchanged.
 
-If your proxy does not forward WebSocket upgrade headers, the browser will disconnect and `/ws/bbs` may return `426 Upgrade Required`.
+Do not start an old image against the new public save table without the rollback
+procedure. The old schema may refuse to proceed. The SQL scripts in `ops/` archive
+saves outside the managed public schema and can restore them later. They do not
+use `--accept-data-loss`. See [release notes](docs/release-notes.md) for commands.
 
-For Nginx, ensure these headers are forwarded:
+## Reverse proxies and WebSockets
+
+The terminal requires `/ws/bbs` to upgrade successfully with HTTP 101. For Nginx:
 
 ```nginx
 proxy_http_version 1.1;
@@ -96,76 +110,47 @@ proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection "Upgrade";
 ```
 
-Release `00.03.03` fixes a separate server startup-order bug: the WebSocket
-plugin is now awaited before routes are declared. The `00.03.02` integration
-run failed on a direct connection with no reverse proxy. Rebuild or update the
-application to apply this fix; changing proxy headers alone cannot fix that bug.
-A plain HTTP request to `/ws/bbs` still intentionally returns `426`.
+A normal HTTP request to that endpoint intentionally returns 426. The startup
+registration-order fix from 00.03.03 is retained; proxy changes do not substitute
+for running a corrected image.
 
-## Local dev (without Docker)
+## Door development and validation
 
-Requires Node 22+ and Postgres.
-
-```sh
-cp .env.example .env
-npm install
-npm run vendor
-npm run dev
-```
-
-## Door plugins
-
-Door packages live in `doors/<doorId>/` and export a `door` object from `door.mjs`.
-
-Example:
-- `doors/guess-number/door.mjs`
-
-On startup, the server scans `./doors` and loads door packages. Sysop/Admin can “install” doors (persisted in DB) and enable/disable them.
-
-## Notes
-
-- This repository is intentionally modular. Most sysop/admin operations are implemented, but the “classic BBS” UI can be extended significantly (newscan pointers, message base indexing, ANSI art packs, external PTY doors, etc.).
-- File transfer is performed via browser download/upload, but initiated and controlled from within the BBS UI.
-
-## Documentation and GitHub Pages
-
-The [Jekyll documentation site](https://paulkakell.github.io/webbbs/) contains
-[getting-started instructions](docs/getting-started.md), [container installation](docs/containers.md),
-[security guidance](docs/security.md), and [release notes with rollback procedures](docs/release-notes.md).
-GitHub Pages hosts documentation only, not the running Node.js BBS.
-
-Edit `docs/` and push to `main` to publish. Pull requests run checks and build
-previews without deploying. Pages must use **GitHub Actions** as its source.
-Configuration and local-build examples are in `docs/getting-started.md`.
-
-## Security and validation
-
-Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
-CodeQL scans application code. Dependabot proposes npm, GitHub Actions, and
-Docker updates weekly; alert settings are separate and no updates auto-merge.
+A package uses `doors/<doorId>/manifest.json` and exports `door` from `door.mjs`.
+The existing `createModule`, `enter`, `onLine`, and exit callback contract remains
+unchanged. External PTY doors are still not implemented.
 
 ```sh
-npm test              # all checked-in tests
-npm run check         # syntax, version, workflow, and configuration checks
-npm run pages:verify  # generated _site artifact and local links
+npm test
+npm run check
+npm run pages:verify     # after generating _site with Jekyll
 ```
 
-The GHCR workflow runs these repository tests and syntax checks, builds a fresh
-image, audits all shipped npm dependencies, and tests a disposable PostgreSQL
-stack before publication. Authentication, authorization, database writes,
-session revocation, and WebSocket upgrades are covered by the smoke check.
-The WebSocket probe requires the login prompt, a blank-handle round-trip, and
-normal connection closure; a handshake alone is insufficient. Its dependency-free
-unit tests cover handshake failures, missing output/replies, malformed frames,
-output limits, and timeouts. Run the full integration script only against a
-disposable stack because its other checks create and delete a test board.
-Its summary records the verified digest; npm audit is not an OS-package scan.
-Dependency ranges remain unlocked, so use published digests rather than assuming
-source rebuilds produce identical images.
+The new dependency-free tests cover gameplay, authorization, retries, persistence,
+timer cleanup, configuration, and a bounded engine benchmark. Container integration
+also exercises real PostgreSQL concurrency and schema rollback/restore:
 
-Release versions use `xx.xx.xx`; npm uses the equivalent unpadded semver.
-The Pages workflow creates the matching source tag and release after its own
-validation, application build, and deployment. The GHCR workflow independently
-publishes version/commit image tags and updates `latest` only for current main.
-Check both workflows: a source release alone does not prove the image was pushed.
-Existing source tags are never moved.
+```sh
+# Disposable stack ONLY; refuses a database that already contains game saves.
+docker compose -f docker-compose.ghcr.yml exec -T \
+  -e WEBBBS_DOOR_INTEGRATION=1 webbbs_app node scripts/smoke-doors.mjs
+```
+
+CI retains the full test suite, repository/YAML checks, fresh Docker builds,
+blocking npm audit, existing authentication/WebSocket integration, and CodeQL.
+No dependencies or ranges are added or changed for these doors. The project still
+has no committed npm lockfile; retain verified image digests for reproducibility.
+
+## Documentation and security
+
+The [documentation site](https://paulkakell.github.io/webbbs/) includes
+[getting started](docs/getting-started.md), [containers](docs/containers.md),
+[games](docs/bundled-doors.md), [security](docs/security.md), and
+[release notes](docs/release-notes.md). Pages hosts documentation, not the Node app.
+Edit `docs/` on `main` to publish; Pages must use GitHub Actions as its source.
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Read [CHANGELOG.md](CHANGELOG.md) for release classifications and traceability.
+Release versions use `xx.xx.xx`; npm uses the equivalent unpadded semantic version.
+Existing tags are never moved. Consult both Pages and GHCR workflow results before
+treating a source release as a published, validated container.
