@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:26-bookworm-slim
 
 LABEL org.opencontainers.image.source="https://github.com/paulkakell/webbbs" \
       org.opencontainers.image.description="Classic BBS with a browser terminal, message boards, file areas, and doors." \
