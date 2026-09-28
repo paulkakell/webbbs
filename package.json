@@ -24,7 +24,7 @@
     "@fastify/websocket": "^11.2.0",
     "@prisma/client": "^5.21.1",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.5",
+    "dotenv": "^18.0.3",
     "fastify": "^5.7.0",
     "mime-types": "^2.1.35",
     "pg": "^8.12.0",
