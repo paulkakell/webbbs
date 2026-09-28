@@ -52,7 +52,7 @@ test('integration checks cover sessions, database writes, and WebSocket upgrade'
 test('security fixes retain patched dependency minimums and static guard checks', () => {
   const dependencies = JSON.parse(read('package.json')).dependencies;
   assert.equal(dependencies['@fastify/static'], '^10.1.5');
-  assert.equal(dependencies.uuid, '^11.1.1');
+  assert.equal(dependencies.uuid, '^14.0.2');
   assert.ok(read('scripts/smoke-container.mjs').includes("import('./smoke-static.mjs')"));
   assert.ok(read('scripts/smoke-static.mjs').includes('/other/%2e%2e/protected/secret.txt'));
 });
